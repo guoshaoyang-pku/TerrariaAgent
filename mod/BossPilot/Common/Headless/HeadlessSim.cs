@@ -113,6 +113,10 @@ public sealed class HeadlessSim : ModSystem
                 Main.screenPosition = Main.LocalPlayer.Center - new Vector2(Main.screenWidth, Main.screenHeight) / 2f;
                 // Player.Update reads input and calls ModPlayer.SetControls only while focused.
                 Main.hasFocus = true;
+                // Zone flags (jungle, corruption, snow...) come from SceneMetrics, which only the client's
+                // lighting engine rescans (every 4 frames, LightingEngine ExportMetrics). Without it biome
+                // bosses enrage or despawn.
+                if (Ticks % 4 == 0) Main.LocalPlayer.ForceUpdateBiomes();
                 update(new GameTime());
                 Ticks++;
                 job.AfterTick();

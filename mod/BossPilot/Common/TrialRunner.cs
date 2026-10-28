@@ -37,7 +37,7 @@ public sealed class TrialRunner : ModSystem
 
     private HashSet<int> trackedTypes = [];
     private int settleTicks;
-    private bool bossSeen;
+    private bool bossSeen, bossDefeated;
 
     public string Start(ScenarioConfig scenario)
     {
@@ -51,7 +51,7 @@ public sealed class TrialRunner : ModSystem
         Result = null;
         Hits = DamageTaken = Kills = 0;
         BossHpFraction = 1f;
-        bossSeen = false;
+        bossSeen = bossDefeated = false;
         trackedTypes = [entry.NpcId, .. entry.ExtraPartIds];
 
         // World stage follows the boss; one server runs many scenarios, so never inherit the last one's.
@@ -121,13 +121,18 @@ public sealed class TrialRunner : ModSystem
         }
 
         if (Main.LocalPlayer.dead) Finish("death");
-        else if (!any && Context.Tick > 2) Finish(!bossSeen ? "spawn_failed" : Kills > 0 ? "victory" : "despawn");
+        else if (!any && Context.Tick > 2) Finish(!bossSeen ? "spawn_failed" : bossDefeated ? "victory" : "despawn");
         else if (Context.Tick / 60.0 >= Scenario.MaxDurationSeconds) Finish("timeout");
     }
 
-    internal void NoteKill(int npcType)
+    internal void NoteKill(NPC npc)
     {
-        if (Current == Phase.Fighting && trackedTypes.Contains(npcType)) Kills++;
+        if (Current != Phase.Fighting || !trackedTypes.Contains(npc.type)) return;
+        Kills++;
+        // The kernel's own defeat marker: only the last Twin and the last EoW segment die with boss set,
+        // and parts (fists, hands, creepers) never have it. Killing a part and then losing the boss to
+        // a despawn is not a victory.
+        if (npc.boss) bossDefeated = true;
     }
 
     private void Finish(string result)
@@ -220,5 +225,5 @@ public sealed class TrialMetricsPlayer : ModPlayer
 
 public sealed class TrialMetricsNPC : GlobalNPC
 {
-    public override void OnKill(NPC npc) => TrialRunner.Instance.NoteKill(npc.type);
+    public override void OnKill(NPC npc) => TrialRunner.Instance.NoteKill(npc);
 }
