@@ -44,6 +44,8 @@ public sealed class Deerclops : BossPlan
     // Jester's). stage_plus: Hellwing Bow (shadow chest) with necro armor.
     public override void GrantLoadout(Player p, ScenarioConfig s)
     {
+        // Pre-hardmode boss; the world flag is not reset between scenarios by the harness.
+        Main.hardMode = false;
         Kit.Reset(p);
         switch (s.Loadout)
         {
@@ -143,15 +145,8 @@ public sealed class Deerclops : BossPlan
         if (d != null) gunner.Fire(p, gunner.Lead(p.Center, d.Center, d.velocity), true);
         else gunner.Fire(p, p.Center, false);
         if (ctx.Tick % 120 == 0) TraceState(p, ctx, d);
-        if (planner.PredictedHit <= 16) TraceDanger(p, ctx, d);
-        history[ctx.Tick % history.Length] = $"{ctx.Tick}:({planner.Chosen.A},{planner.Chosen.B},{planner.Chosen.Switch},{planner.Chosen.JumpAt},{planner.Chosen.Down})h{planner.PredictedHit}y{p.position.Y / 16f:F1}";
         bool below = p.position.Y + p.height > bridgeFeet + 24f;
-        if (below && !wasBelow)
-        {
-            string h = "";
-            for (int k = 30; k >= 0; k--) h += " " + history[(ctx.Tick - k + history.Length * 4) % history.Length];
-            Trace.Line($"[drop] t={ctx.Tick} p=({p.Center.X / 16f:F1},{p.Center.Y / 16f:F1}) v={p.velocity} history:{h}");
-        }
+        if (below && !wasBelow) Trace.Line($"[drop] t={ctx.Tick} p=({p.Center.X / 16f:F1},{p.Center.Y / 16f:F1}) v={p.velocity} chosen down={planner.Chosen.Down}");
         wasBelow = below;
         return true;
     }
@@ -185,7 +180,6 @@ public sealed class Deerclops : BossPlan
                    $"p=({p.Center.X / 16f:F0},{p.Center.Y / 16f:F0}) d=({(d == null ? 0 : d.Center.X / 16f):F0},{(d == null ? 0 : d.Center.Y / 16f):F0}) hit={planner.PredictedHit} snow={p.ZoneSnow} slow={p.slow} modelErr={planner.MaxErr}");
     }
 
-    private readonly string[] history = new string[40];
     private bool wasBelow;
     private readonly System.Collections.Generic.Dictionary<int, (int due, Vector2 at, float ai0)> handChecks = [];
     private int handLogs;
@@ -200,16 +194,6 @@ public sealed class Deerclops : BossPlan
             handChecks.Remove(pr.identity);
         }
         if (!handChecks.ContainsKey(pr.identity) && tr.On[10]) handChecks[pr.identity] = (tick + 10, tr.At[10].Center, pr.ai[0]);
-    }
-
-    private void TraceDanger(Player p, FightContext ctx, NPC d)
-    {
-        string hs = "";
-        foreach (Projectile pr in Main.projectile)
-            if (pr.active && pr.hostile && Vector2.Distance(pr.Center, p.Center) < 260f)
-                hs += $" [{pr.type} ai0={pr.ai[0]:F0} ai1={pr.ai[1]:F2} c=({pr.Center.X - p.Center.X:F0},{pr.Center.Y - p.Center.Y:F0}) v=({pr.velocity.X:F1},{pr.velocity.Y:F1}) r={pr.rotation:F2}]";
-        Trace.Line($"[danger] t={ctx.Tick} hit@{planner.PredictedHit} m=({planner.Chosen.A},{planner.Chosen.B},{planner.Chosen.JumpAt},{planner.Chosen.CloudAt},{planner.Chosen.Down}) " +
-                   $"p=({p.Center.X / 16f:F1},{p.Center.Y / 16f:F1}) v=({p.velocity.X:F1},{p.velocity.Y:F1}) dc={(d == null ? -1 : d.ai[0])}/{(d == null ? 0 : d.ai[1]):F0}{hs}");
     }
 
     private float Objective(in PilotState s, int t)

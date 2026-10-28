@@ -35,10 +35,13 @@ public sealed class BrainOfCthulhu : BossPlan
     private Vector2 brainCenter;
     private bool phase2;
 
-    // Same progression point as the Eater: ore bow + Jester's Arrows (pierce the creeper
-    // ring), platinum armor, boots/bottle/balloon/horseshoe/aglet, Swiftness/Ironskin/Archery.
+    // Same progression point as the Eater: ore bow + Jester's Arrows (pierce the creeper ring,
+    // then the brain; grenades do not carry the ~20 tiles kept from the swarm), platinum armor,
+    // boots/bottle/balloon/horseshoe/aglet, Swiftness/Ironskin/Archery, ~10 crystals.
     public override void GrantLoadout(Player p, ScenarioConfig s)
     {
+        // Pre-hardmode boss; the world flag is not reset between scenarios by the harness.
+        Main.hardMode = false;
         Kit.Reset(p);
         switch (s.Loadout)
         {
@@ -70,6 +73,17 @@ public sealed class BrainOfCthulhu : BossPlan
 
     public override Point ArenaSite(ScenarioConfig s) => Arena.SpawnSite();
 
+    /// <summary>
+    /// Extends the crimstone slab under the arena well past its edges: the brain gives up the
+    /// chase the moment ZoneCrimson drops, which a long dodge toward an arena edge can cause.
+    /// </summary>
+    public override void DecorateArena(Point site, ScenarioConfig s)
+    {
+        int half = s.Arena == "enclosed" ? 50 : 60;
+        Arena.Fill(site.X - half - 40, site.X - half - 1, site.Y, site.Y + 4, TileID.Crimstone);
+        Arena.Fill(site.X + half, site.X + half + 40, site.Y, site.Y + 4, TileID.Crimstone);
+    }
+
     public override bool Control(Player p, NPC boss, FightContext ctx)
     {
         if (ctx != ctxSeen) Begin(p, ctx);
@@ -83,7 +97,8 @@ public sealed class BrainOfCthulhu : BossPlan
         phase2 = b != null && b.ai[0] < 0f;
         if (b != null)
         {
-            brainCenter = b.Center;
+            // While fading out the destination tile is already known: keep away from where it will be.
+            brainCenter = b.ai[0] is 1f or -2f ? new Vector2(b.ai[1] * 16f, b.ai[2] * 16f) : b.Center;
             brain.Capture(b);
             f.Reactive.Add(brain);
         }
@@ -143,11 +158,11 @@ public sealed class BrainOfCthulhu : BossPlan
         Vector2 me = s.Pos + new Vector2(10f, 21f);
         float c = 0f;
         float d = Vector2.Distance(me, brainCenter);
-        const float want = 330f;
+        const float want = 360f;
         if (d < want) c += 0.012f * (want - d) * (want - d);
         else if (d > 560f) c += 0.002f * (d - 560f) * (d - 560f);
-        float dx = me.X - homeX;
-        if (Math.Abs(dx) > 40 * 16) c += 0.02f * (Math.Abs(dx) - 40 * 16) * (Math.Abs(dx) - 40 * 16);
+        float dx = Math.Abs(me.X - homeX);
+        if (dx > 36 * 16) c += 300f + 0.2f * (dx - 36 * 16) * (dx - 36 * 16);
         // Prefer the floor and the first platform row: room to jump either way.
         float rise = floorY - (s.Pos.Y + 42f);
         if (rise > 13 * 16) c += 0.01f * (rise - 13 * 16) * (rise - 13 * 16);

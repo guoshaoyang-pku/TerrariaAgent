@@ -65,11 +65,14 @@ public readonly struct Maneuver
 public delegate float StateCost(in PilotState s, int t);
 
 /// <summary>
-/// Receding-horizon dodge planner: every tick it simulates ~50 candidate
-/// maneuvers for 48 ticks with PilotModel, checks them against the predicted
-/// HazardField, and applies the first input of the best one. Candidates that
-/// collide are ranked by how late the first collision happens; safe ones by
-/// clearance plus the boss plan's objective.
+/// Receding-horizon dodge planner: every tick it simulates ~90 candidate
+/// maneuvers (15 walking-only ones when nothing is in reach) for 72 ticks with
+/// PilotModel, checks them against the predicted HazardField, and applies the
+/// first input of the best one. Last tick's choice is re-tried one tick later
+/// (warm start), and while a hit is still predicted 300 random maneuvers are
+/// searched. Colliding candidates are ranked by how late the first collision
+/// is (far-future ones weigh little); safe ones by clearance plus the plan's
+/// objective. Overlaps during the pilot's immunity frames only cost.
 /// </summary>
 public sealed class Planner
 {

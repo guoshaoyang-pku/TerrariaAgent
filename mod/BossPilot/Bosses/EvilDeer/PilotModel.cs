@@ -19,8 +19,8 @@ public struct PilotState
 /// <summary>
 /// Reduced copy of the player movement code (Player.HorizontalMovement,
 /// JumpMovement, gravity and tile collision) for the no-mount, no-wing case.
-/// Speeds are read from the live player each tick: SetControls runs before
-/// ResetEffects, so the fields still hold last tick's computed values.
+/// Speeds come from MoveStats (last update's final values; at SetControls time
+/// Player.Update has already reset them to base).
 /// Collision uses the ArenaGrid snapshot (flat floors, platforms, walls).
 /// </summary>
 public sealed class PilotModel
@@ -31,14 +31,28 @@ public sealed class PilotModel
 
     public void Read(Player p)
     {
-        MaxRun = p.maxRunSpeed;
-        AccRun = p.accRunSpeed;
-        RunAccel = p.runAcceleration;
-        RunSlow = p.runSlowdown;
-        JumpSpeed = Player.jumpSpeed;
-        JumpHeight = Player.jumpHeight;
-        Gravity = p.gravity;
-        MaxFall = p.maxFallSpeed;
+        if (MoveStats.Valid)
+        {
+            MaxRun = MoveStats.MaxRun;
+            AccRun = MoveStats.AccRun;
+            RunAccel = MoveStats.RunAccel;
+            RunSlow = MoveStats.RunSlow;
+            JumpSpeed = MoveStats.JumpSpeed;
+            JumpHeight = MoveStats.JumpHeight;
+            Gravity = MoveStats.Gravity;
+            MaxFall = MoveStats.MaxFall;
+        }
+        else
+        {
+            MaxRun = p.maxRunSpeed;
+            AccRun = p.accRunSpeed;
+            RunAccel = p.runAcceleration;
+            RunSlow = p.runSlowdown;
+            JumpSpeed = Player.jumpSpeed;
+            JumpHeight = Player.jumpHeight;
+            Gravity = p.gravity;
+            MaxFall = p.maxFallSpeed;
+        }
         W = p.width;
         H = p.height;
         HasCloud = p.GetJumpState(ExtraJump.CloudInABottle).Enabled;
