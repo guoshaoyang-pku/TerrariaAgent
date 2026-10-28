@@ -4,8 +4,10 @@
     <tMLTargets Condition="'$(tMLTargets)' == '' AND Exists('$(MSBuildThisFileDirectory)..\tModLoader.targets')">$(MSBuildThisFileDirectory)..\tModLoader.targets</tMLTargets>
     <!-- Windows default -->
     <tMLTargets Condition="'$(tMLTargets)' == '' AND '$(USERPROFILE)' != ''">$(USERPROFILE)\Documents\My Games\Terraria\tModLoader\ModSources\tModLoader.targets</tMLTargets>
-    <!-- macOS / Linux default -->
-    <tMLTargets Condition="'$(tMLTargets)' == '' AND '$(HOME)' != ''">$(HOME)/Documents/My Games/Terraria/tModLoader/ModSources/tModLoader.targets</tMLTargets>
+    <!-- macOS default -->
+    <tMLTargets Condition="'$(tMLTargets)' == '' AND $([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/Terraria/tModLoader/ModSources/tModLoader.targets</tMLTargets>
+    <!-- Linux default -->
+    <tMLTargets Condition="'$(tMLTargets)' == '' AND '$(HOME)' != ''">$(HOME)/.local/share/Terraria/tModLoader/ModSources/tModLoader.targets</tMLTargets>
   </PropertyGroup>
   <Import Project="$(tMLTargets)" />
   <PropertyGroup>

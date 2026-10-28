@@ -1,7 +1,1 @@
-Mods: {
-	BossPilot: {
-		Configs: {
-			DisplayName: Boss Pilot
-		}
-	}
-}
+Mods.BossPilot.Configs.DisplayName: Boss Pilot
