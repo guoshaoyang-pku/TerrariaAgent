@@ -54,6 +54,10 @@ public sealed class TrialRunner : ModSystem
         bossSeen = false;
         trackedTypes = [entry.NpcId, .. entry.ExtraPartIds];
 
+        // World stage follows the boss; one server runs many scenarios, so never inherit the last one's.
+        // Plans may still override it in ArenaSite/GrantLoadout.
+        Main.hardMode = entry.Hardmode;
+
         Player p = Main.LocalPlayer;
         Point site = Plan?.ArenaSite(scenario) ?? ArenaSites.Default(scenario.Biome);
         ArenaBuilder.Build(scenario.Arena, scenario.Biome, site.ToWorldCoordinates());

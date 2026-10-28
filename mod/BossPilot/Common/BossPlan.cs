@@ -96,11 +96,17 @@ public static class ArenaSites
         };
     }
 
-    /// <summary>First solid tile from the top at column x.</summary>
+    /// <summary>
+    /// First solid tile from the top at column x. Platforms (solid-top) are skipped: otherwise the
+    /// next attempt is built on the previous arena's top platform row, over the cleared void.
+    /// </summary>
     public static int SurfaceAt(int x)
     {
         for (int y = 50; y < Main.worldSurface + 50; y++)
-            if (Main.tile[x, y].HasTile && Main.tileSolid[Main.tile[x, y].TileType]) return y;
+        {
+            Tile t = Main.tile[x, y];
+            if (t.HasTile && Main.tileSolid[t.TileType] && !Main.tileSolidTop[t.TileType]) return y;
+        }
         return (int)Main.worldSurface;
     }
 }

@@ -119,6 +119,13 @@ def launch(k, run_dir, scenarios, attempts, tmod, wld):
     return p, log, d
 
 
+def port_taken(d):
+    results = d / "out" / "results.jsonl"
+    if results.exists() and results.stat().st_size:
+        return False
+    return "Address already in use" in (d / "server.log").read_text(errors="replace")
+
+
 def summarise(run_dir):
     rows = []
     for f in sorted(run_dir.glob("w*/out/results.jsonl")):
@@ -174,7 +181,18 @@ def main():
         time.sleep(3)  # stagger startup so two servers never race for the same log file name
 
     deadline = time.time() + a.timeout
-    while any(p.poll() is None for p, _, _ in workers):
+    retries = [0] * n
+    while True:
+        for k, (p, log, d) in enumerate(workers):
+            # free_port() releases its probe socket before the server binds it, so another runner on
+            # this machine can take the port first; the server then exits before running any attempt.
+            if p.poll() is not None and retries[k] < 3 and port_taken(d):
+                log.close()
+                retries[k] += 1
+                print(f"{d.name}: port taken, relaunching ({retries[k]}/3)", flush=True)
+                workers[k] = launch(k, run_dir, chunks[k], a.attempts, tmod, wld)
+        if all(p.poll() is not None for p, _, _ in workers):
+            break
         if time.time() > deadline:
             for p, _, d in workers:
                 if p.poll() is None:

@@ -45,6 +45,12 @@ python3 scripts/run_trials.py --all --parallel 12
 生命/魔力上限用 `LoadoutGiver.SetMaxStats(p, life, mana)`：tML 每 tick 按已吃生命水晶/果重算
 `statLifeMax`，直接写 `statLifeMax` 下一 tick 就被改回 100。
 
+`Player.Update` 在调用 `SetControls` 之前把 `maxRunSpeed`/`runAcceleration`/`jumpSpeed` 等重置为基础值
+（饰品加成稍后才加回），所以 `Control` 里读到的是基础值；需要真实值时在 `ModPlayer.PostUpdateRunSpeeds` 缓存。
+
+`Main.hardMode` 每次试炼开始按 `BossCatalog` 的 `Hardmode` 设定，方案可在 `ArenaSite`/`GrantLoadout` 里覆盖。
+`ArenaSites.SurfaceAt` 跳过平台（否则下一次尝试会建在上一场的顶层平台上）。
+
 ## 无头模式已处理的坑（`Common/Headless/`）
 
 服务端从不初始化客户端子系统，而 `netMode = 0` 会让原本只在客户端跑的代码执行。已修：
