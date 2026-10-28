@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <tMLTargets Condition="'$(tMLTargets)' == '' AND Exists('$(MSBuildThisFileDirectory)..\tModLoader.targets')">$(MSBuildThisFileDirectory)..\tModLoader.targets</tMLTargets>
+    <!-- Windows default -->
+    <tMLTargets Condition="'$(tMLTargets)' == '' AND '$(USERPROFILE)' != ''">$(USERPROFILE)\Documents\My Games\Terraria\tModLoader\ModSources\tModLoader.targets</tMLTargets>
+    <!-- macOS / Linux default -->
+    <tMLTargets Condition="'$(tMLTargets)' == '' AND '$(HOME)' != ''">$(HOME)/Documents/My Games/Terraria/tModLoader/ModSources/tModLoader.targets</tMLTargets>
+  </PropertyGroup>
+  <Import Project="$(tMLTargets)" />
+  <PropertyGroup>
+    <AssemblyName>BossPilot</AssemblyName>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <!-- Trial logic runs inside the game update; keep JIT optimization on. -->
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+</Project>

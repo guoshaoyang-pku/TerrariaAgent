@@ -1,0 +1,150 @@
+{
+  "comment": "Boss 挑战矩阵。每个 boss 的场景轴：arena(场地)、biome(群落)、time(昼夜)、weather(天气)、loadout(配装档)、buffs。loadout 的具体装备表另行定义；stage_default = 当前流程阶段标配，min_preboss = 最低可打配置，stage_plus = 超一阶段配置。场景名全局唯一。",
+  "defaults": {
+    "arena": "flat_platforms",
+    "biome": "forest",
+    "time": "night",
+    "weather": "clear",
+    "loadout": "stage_default",
+    "buffs": "none",
+    "rescue_budget_ms": 16
+  },
+  "bosses": {
+    "king_slime": {
+      "max_duration_seconds": 240,
+      "scenarios": [
+        { "name": "ks_flat_day", "time": "day" },
+        { "name": "ks_natural_rain", "arena": "natural", "time": "day", "weather": "rain" },
+        { "name": "ks_flat_night_wind", "weather": "wind", "loadout": "min_preboss" }
+      ]
+    },
+    "eye_of_cthulhu": {
+      "max_duration_seconds": 300,
+      "scenarios": [
+        { "name": "eoc_flat_night" },
+        { "name": "eoc_sky_night_rain", "arena": "open_sky", "weather": "rain" },
+        { "name": "eoc_flat_minimal", "loadout": "min_preboss", "max_duration_seconds": 420 }
+      ]
+    },
+    "eater_of_worlds": {
+      "max_duration_seconds": 360,
+      "scenarios": [
+        { "name": "eow_chasm_enclosed", "arena": "enclosed", "biome": "corruption" },
+        { "name": "eow_surface_flat", "biome": "corruption", "time": "day" }
+      ]
+    },
+    "brain_of_cthulhu": {
+      "max_duration_seconds": 360,
+      "scenarios": [
+        { "name": "boc_cavern_enclosed", "arena": "enclosed", "biome": "crimson" },
+        { "name": "boc_surface_flat", "biome": "crimson", "time": "day" }
+      ]
+    },
+    "queen_bee": {
+      "max_duration_seconds": 360,
+      "scenarios": [
+        { "name": "qb_hive_enclosed", "arena": "enclosed", "biome": "underground_jungle", "time": "day" },
+        { "name": "qb_jungle_natural", "arena": "natural", "biome": "jungle", "time": "day", "weather": "rain" },
+        { "name": "qb_jungle_flat", "biome": "jungle", "time": "day" }
+      ]
+    },
+    "skeletron": {
+      "max_duration_seconds": 420,
+      "scenarios": [
+        { "name": "sk_dungeon_flat", "biome": "dungeon" },
+        { "name": "sk_dungeon_rain", "biome": "dungeon", "weather": "rain" },
+        { "name": "sk_dungeon_sky", "arena": "open_sky", "biome": "dungeon" }
+      ]
+    },
+    "deerclops": {
+      "max_duration_seconds": 360,
+      "scenarios": [
+        { "name": "dc_snow_blizzard", "arena": "natural", "biome": "snow", "time": "day", "weather": "blizzard" },
+        { "name": "dc_snow_flat_night", "biome": "snow" }
+      ]
+    },
+    "wall_of_flesh": {
+      "max_duration_seconds": 480,
+      "scenarios": [
+        { "name": "wof_bridge", "arena": "bridge", "biome": "underworld", "time": "day", "max_duration_seconds": 480 },
+        { "name": "wof_natural_hell", "arena": "natural", "biome": "underworld", "time": "day", "max_duration_seconds": 480 }
+      ]
+    },
+    "queen_slime": {
+      "max_duration_seconds": 420,
+      "scenarios": [
+        { "name": "qs_hallow_day", "biome": "hallow", "time": "day" },
+        { "name": "qs_hallow_night_rain", "biome": "hallow", "weather": "rain" }
+      ]
+    },
+    "twins": {
+      "max_duration_seconds": 480,
+      "scenarios": [
+        { "name": "tw_sky_night", "arena": "open_sky" },
+        { "name": "tw_flat_night" },
+        { "name": "tw_space_night", "arena": "open_sky", "biome": "space" }
+      ]
+    },
+    "destroyer": {
+      "max_duration_seconds": 480,
+      "scenarios": [
+        { "name": "dst_flat_night" },
+        { "name": "dst_enclosed_night", "arena": "enclosed" },
+        { "name": "dst_sky_night", "arena": "open_sky", "biome": "space" }
+      ]
+    },
+    "skeletron_prime": {
+      "max_duration_seconds": 480,
+      "scenarios": [
+        { "name": "sp_flat_night" },
+        { "name": "sp_sky_night", "arena": "open_sky" },
+        { "name": "sp_desert_sandstorm", "biome": "desert", "weather": "sandstorm" }
+      ]
+    },
+    "plantera": {
+      "max_duration_seconds": 480,
+      "scenarios": [
+        { "name": "pl_jungle_enclosed", "arena": "enclosed", "biome": "underground_jungle", "time": "day" },
+        { "name": "pl_jungle_natural", "arena": "natural", "biome": "underground_jungle", "time": "day" }
+      ]
+    },
+    "golem": {
+      "max_duration_seconds": 420,
+      "scenarios": [
+        { "name": "gl_temple_enclosed", "arena": "enclosed", "biome": "jungle", "time": "day" },
+        { "name": "gl_temple_natural", "arena": "natural", "biome": "jungle", "time": "day" }
+      ]
+    },
+    "duke_fishron": {
+      "max_duration_seconds": 420,
+      "scenarios": [
+        { "name": "df_ocean_rain", "arena": "open_sky", "biome": "ocean", "time": "day", "weather": "rain" },
+        { "name": "df_ocean_night", "biome": "ocean" },
+        { "name": "df_ocean_wind", "arena": "natural", "biome": "ocean", "time": "day", "weather": "wind" }
+      ]
+    },
+    "empress_of_light": {
+      "max_duration_seconds": 420,
+      "scenarios": [
+        { "name": "eol_hallow_night", "biome": "hallow" },
+        { "name": "eol_daytime", "biome": "hallow", "time": "day", "loadout": "stage_plus", "max_duration_seconds": 300 },
+        { "name": "eol_hallow_rain", "biome": "hallow", "weather": "rain" }
+      ]
+    },
+    "lunatic_cultist": {
+      "max_duration_seconds": 420,
+      "scenarios": [
+        { "name": "lc_dungeon_day", "biome": "dungeon", "time": "day" },
+        { "name": "lc_dungeon_night_rain", "biome": "dungeon", "weather": "rain" }
+      ]
+    },
+    "moon_lord": {
+      "max_duration_seconds": 600,
+      "scenarios": [
+        { "name": "ml_space_night", "arena": "open_sky", "biome": "space", "buffs": "standard" },
+        { "name": "ml_flat_night", "buffs": "standard" },
+        { "name": "ml_hallow_sky", "arena": "open_sky", "biome": "hallow", "buffs": "standard" }
+      ]
+    }
+  }
+}

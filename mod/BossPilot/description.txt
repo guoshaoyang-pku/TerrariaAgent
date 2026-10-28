@@ -1,0 +1,2 @@
+BossPilot is a boss-challenge harness for the Terraria Agent project.
+It loads scenario configs, prepares arenas, spawns bosses, exports game state, and replays input scripts.

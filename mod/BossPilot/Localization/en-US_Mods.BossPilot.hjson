@@ -1,0 +1,7 @@
+Mods: {
+	BossPilot: {
+		Configs: {
+			DisplayName: Boss Pilot
+		}
+	}
+}
