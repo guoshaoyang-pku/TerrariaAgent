@@ -45,25 +45,13 @@ public sealed class AutoPilot : ModPlayer
         foreach (Projectile pr in Main.projectile)
         {
             if (!pr.active || !pr.hostile || pr.damage <= 0) continue;
-            Vector2 toMe = pos - pr.Center;
-            float speed = pr.velocity.Length();
-            if (speed < 0.01f) continue;
-            float tHit = Vector2.Dot(toMe, pr.velocity) / (speed * speed);
-            if (tHit < 0 || tHit > ThreatHorizon) continue;
-            Vector2 closest = pr.Center + pr.velocity * tHit;
-            float miss = Vector2.Distance(closest, pos);
-            float need = ThreatRadius + Math.Max(pr.width, pr.height) * 0.5f;
-            if (miss < need && miss < worst)
-            {
-                worst = miss;
-                // Sidestep perpendicular to the projectile's travel line,
-                // choosing the side that moves away from its closest point.
-                Vector2 perp = new(-pr.velocity.Y, pr.velocity.X);
-                perp.Normalize();
-                if (Vector2.Dot(perp, pos - closest) < 0) perp = -perp;
-                dodge = perp;
-            }
+            TryThreat(pr.Center, pr.velocity, Math.Max(pr.width, pr.height) * 0.5f, ref dodge, ref worst, pos);
         }
+        // The boss body is itself the main threat: predict its landing point
+        // (jumping bosses like King Slime) with a generous personal radius.
+        if (boss != null)
+            TryThreat(boss.Center, boss.velocity, Math.Max(boss.width, boss.height) * 0.5f + 4f * 16,
+                ref dodge, ref worst, pos);
 
         // --- Range keeping vs boss.
         float moveX = 0f, moveY = 0f;
@@ -74,16 +62,6 @@ public sealed class AutoPilot : ModPlayer
             Vector2 dir = dist > 0.01f ? toBoss / dist : Vector2.Zero;
             if (dist > PreferredRange + RangeSlack) { moveX += dir.X; moveY += dir.Y * 0.4f; }
             else if (dist < PreferredRange - RangeSlack) { moveX -= dir.X; moveY -= dir.Y * 0.4f; }
-
-            // Never let the boss body itself touch us.
-            float body = Vector2.Distance(pos, boss.Center) - Math.Max(boss.width, boss.height) * 0.5f;
-            if (body < ThreatRadius)
-            {
-                Vector2 away = -dir;
-                if (away.LengthSquared() < 0.01f) away = new Vector2(1, 0);
-                moveX += away.X * 1.5f;
-                moveY += away.Y * 1.5f;
-            }
 
             // Attack: aim and hold use.
             Main.mouseX = (int)(boss.Center.X - Main.screenPosition.X);
@@ -96,6 +74,10 @@ public sealed class AutoPilot : ModPlayer
             moveX = dodge.X * 1.8f;
             moveY = dodge.Y * 1.2f;
         }
+
+        // Quick-heal under half health.
+        if (Player.statLife < Player.statLifeMax2 / 2 && Player.potionDelay <= 0)
+            Player.QuickHeal();
 
         // --- Translate intent into native controls.
         Player.controlLeft = moveX < -0.2f;
@@ -133,5 +115,29 @@ public sealed class AutoPilot : ModPlayer
             if (d < bestDist) { bestDist = d; best = n; }
         }
         return best;
+    }
+
+    /// <summary>
+    /// If the threat's trajectory passes within (radius + ThreatRadius) of the
+    /// player within ThreatHorizon ticks, propose a perpendicular dodge.
+    /// </summary>
+    private void TryThreat(Vector2 at, Vector2 vel, float radius, ref Vector2 dodge, ref float worst, Vector2 pos)
+    {
+        float speed = vel.Length();
+        if (speed < 0.01f) return;
+        Vector2 toMe = pos - at;
+        float tHit = Vector2.Dot(toMe, vel) / (speed * speed);
+        if (tHit < 0 || tHit > ThreatHorizon) return;
+        Vector2 closest = at + vel * tHit;
+        float miss = Vector2.Distance(closest, pos);
+        float need = ThreatRadius + radius;
+        if (miss < need && miss < worst)
+        {
+            worst = miss;
+            Vector2 perp = new(-vel.Y, vel.X);
+            perp.Normalize();
+            if (Vector2.Dot(perp, pos - closest) < 0) perp = -perp;
+            dodge = perp;
+        }
     }
 }

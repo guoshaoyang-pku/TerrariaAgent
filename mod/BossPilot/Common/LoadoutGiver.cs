@@ -22,6 +22,20 @@ public static class LoadoutGiver
         Give(p, weapon, 1);
         Give(p, ammo, 999);
 
+        // Armor (head/chest/legs slots 0-2). stage_default = 阶段标配.
+        if (hardmode)
+        {
+            Equip(p, 0, ItemID.AdamantiteHelmet);
+            Equip(p, 1, ItemID.AdamantiteBreastplate);
+            Equip(p, 2, ItemID.AdamantiteLeggings);
+        }
+        else
+        {
+            Equip(p, 0, ItemID.PlatinumHelmet);
+            Equip(p, 1, ItemID.PlatinumChainmail);
+            Equip(p, 2, ItemID.PlatinumGreaves);
+        }
+
         // Mobility floor: boots + double jump; wings once hardmode.
         p.armor[3] = new Item();
         p.armor[3].SetDefaults(ItemID.HermesBoots);
@@ -33,6 +47,9 @@ public static class LoadoutGiver
             p.armor[5].SetDefaults(ItemID.LeafWings);
         }
 
+        // Healing potions for the pilot's quick-heal.
+        Give(p, hardmode ? ItemID.GreaterHealingPotion : ItemID.HealingPotion, 30);
+
         // Health floor so v0 trials are not one-shot checks. tML recomputes
         // statLifeMax from ConsumedLifeCrystals/Fruit every tick
         // (PlayerLoader), so grant health through the consumption counters.
@@ -43,6 +60,12 @@ public static class LoadoutGiver
         p.statLife = targetLife;
 
         p.selectedItem = 0;
+    }
+
+    private static void Equip(Player p, int slot, int type)
+    {
+        p.armor[slot] = new Item();
+        p.armor[slot].SetDefaults(type);
     }
 
     private static void Give(Player p, int type, int stack)
