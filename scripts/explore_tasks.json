@@ -1,0 +1,24 @@
+{
+ "_doc": "Exploration task catalog for scripts/run_explore.py. Fields: see mod/BossPilot/Explore/ExploreSpec.cs.",
+ "kit": {},
+ "tasks": {
+  "ocean_left": {"type": "landmark", "target": "ocean_left", "max_seconds": 400},
+  "ocean_right": {"type": "landmark", "target": "ocean_right", "max_seconds": 400},
+  "dungeon": {"type": "landmark", "target": "dungeon", "max_seconds": 400},
+  "jungle": {"type": "landmark", "target": "jungle", "max_seconds": 400},
+  "snow": {"type": "landmark", "target": "snow", "max_seconds": 400},
+  "desert": {"type": "landmark", "target": "desert", "max_seconds": 400},
+  "evil": {"type": "landmark", "target": "evil", "max_seconds": 400},
+  "underground": {"type": "landmark", "target": "underground", "max_seconds": 300},
+  "cavern": {"type": "landmark", "target": "cavern", "max_seconds": 500},
+  "underworld": {"type": "landmark", "target": "underworld", "max_seconds": 1200},
+  "copper": {"type": "ore", "ores": ["copper", "tin"], "count": 20, "max_seconds": 400},
+  "iron": {"type": "ore", "ores": ["iron", "lead"], "count": 20, "max_seconds": 500},
+  "silver": {"type": "ore", "ores": ["silver", "tungsten"], "count": 20, "max_seconds": 600},
+  "gold": {"type": "ore", "ores": ["gold", "platinum"], "count": 20, "max_seconds": 700},
+  "evil_ore": {"type": "ore", "ores": ["demonite", "crimtane"], "count": 15, "max_seconds": 700},
+  "chests3": {"type": "chests", "count": 3, "max_seconds": 500},
+  "life_crystal": {"type": "life_crystal", "count": 1, "max_seconds": 500},
+  "recall": {"type": "recall", "max_seconds": 30}
+ }
+}
