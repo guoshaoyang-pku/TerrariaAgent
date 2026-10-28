@@ -53,6 +53,8 @@ python3 scripts/run_trials.py --all --parallel 12
 `Player.Update` 在调用 `SetControls` 之前把 `maxRunSpeed`/`runAcceleration`/`jumpSpeed` 等重置为基础值
 （饰品加成稍后才加回），所以 `Control` 里读到的是基础值；需要真实值时在 `ModPlayer.PostUpdateRunSpeeds` 缓存。
 
+每次尝试开始前，整张世界的图格/墙/液体/箱子恢复成模板世界（`Explore.WorldSnapshot`），`NPC.downed*` 进度标记、
+雨/沙尘暴/风也恢复；上一场搭的场地、天桥、刷过色的群落地板、挖开的大厅都不会留到下一场。
 `Main.hardMode` 每次试炼开始按 `BossCatalog` 的 `Hardmode` 设定，方案可在 `ArenaSite`/`GrantLoadout` 里覆盖。
 `ArenaSites.SurfaceAt` 从太空层以下开始找、跳过平台（否则下一次尝试会建在上一场的顶层平台或太空场地上）；
 太空场地放在太空层下沿（`0.35 × worldSurface`），玩家在第 41 格以上会被钳住。

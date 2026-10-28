@@ -9,7 +9,7 @@ namespace BossPilot.Bosses.Mechs;
 /// Appends one line per hit taken during a mech trial to &lt;out&gt;/mech_hits.jsonl:
 /// what hit the pilot and what the planner expected, for offline tuning.
 /// </summary>
-public sealed class HitLog : ModPlayer
+public sealed class MechHitLog : ModPlayer
 {
     public override void OnHurt(Player.HurtInfo info)
     {

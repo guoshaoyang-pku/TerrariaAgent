@@ -71,8 +71,19 @@ def free_port():
         return s.getsockname()[1]
 
 
+def kernel_dll():
+    """tModLoader.dll under a name of our own. Other tools on this machine stop their game client with
+    `pkill -f tModLoader.dll`, which would also kill every headless server. The .NET host resolves the
+    symlink, so the app base, runtimeconfig and deps are still tModLoader's."""
+    alias = RUNS / "_kernel" / "BossPilotHeadless.dll"
+    if not alias.is_symlink():
+        alias.parent.mkdir(parents=True, exist_ok=True)
+        alias.symlink_to(TML / "tModLoader.dll")
+    return alias
+
+
 def server_cmd(save_dir, world_args):
-    return [str(DOTNET), str(TML / "tModLoader.dll"), "-server", "-nosteam",
+    return [str(DOTNET), str(kernel_dll()), "-server", "-nosteam",
             "-tmlsavedirectory", str(save_dir), "-port", str(free_port()), "-players", "1", *world_args]
 
 
@@ -117,6 +128,18 @@ def launch(k, run_dir, scenarios, attempts, tmod, wld):
                          cwd=TML, env=env(BOSSPILOT_JOB=job, BOSSPILOT_OUT=d / "out"),
                          stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
     return p, log, d
+
+
+def check_mod_loaded(workers):
+    """tML disables a mod that throws while loading and the server then idles until the timeout."""
+    for p, _, d in workers:
+        text = (d / "server.log").read_text(errors="replace") if (d / "server.log").exists() else ""
+        if "An error occurred while loading BossPilot" in text:
+            for q, _, _ in workers:
+                if q.poll() is None:
+                    q.kill()
+            i = text.index("An error occurred while loading BossPilot")
+            sys.exit(f"BossPilot failed to load on {d.name}:\n{text[max(0, i - 600):i + 400]}")
 
 
 def remaining(d, scenarios, attempts):
@@ -205,6 +228,7 @@ def main():
             shutil.move(d / "server.log", d / f"server.{retries[k]}.log")
             print(f"{d.name} exited {p.returncode} with {len(todo)} attempts left, relaunching ({retries[k]}/3)", flush=True)
             workers[k] = launch(k, run_dir, todo, 1, tmod, wld)
+        check_mod_loaded(workers)
         if all(p.poll() is not None for p, _, _ in workers):
             break
         if time.time() > deadline:

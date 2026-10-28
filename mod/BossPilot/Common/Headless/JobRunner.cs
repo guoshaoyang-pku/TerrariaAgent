@@ -59,6 +59,10 @@ public sealed class JobRunner
         typeof(NPC).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static),
         f => f.FieldType == typeof(bool) && f.Name.StartsWith("downed"));
     private object[] templateProgress;
+    // Tiles, walls, liquids and chests of the template world. Arenas, sky bridges, painted biome
+    // floors and dug halls from one scenario would otherwise shape every later one on this worker.
+    private Explore.WorldSnapshot templateWorld;
+    private float templateWind;
 
     public void Begin()
     {
@@ -70,6 +74,8 @@ public sealed class JobRunner
             Done = explore.Done;
             return;
         }
+        templateWorld = Explore.WorldSnapshot.Take();
+        templateWind = Main.windSpeedTarget;
         StartAttempt();
     }
 
@@ -150,6 +156,12 @@ public sealed class JobRunner
     private void ResetWorld()
     {
         for (int i = 0; i < progressFlags.Length; i++) progressFlags[i].SetValue(null, templateProgress[i]);
+        templateWorld.Restore();
+        // Weather is global state too; the scenario's own weather is applied after this.
+        Main.raining = false;
+        Main.StopRain();
+        if (Terraria.GameContent.Events.Sandstorm.Happening) Terraria.GameContent.Events.Sandstorm.StopSandstorm();
+        Main.windSpeedTarget = Main.windSpeedCurrent = templateWind;
         foreach (NPC n in Main.npc)
             if (n.active && !n.townNPC) n.active = false;
         foreach (Projectile pr in Main.projectile) pr.active = false;

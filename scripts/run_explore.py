@@ -179,6 +179,7 @@ def main():
                     print(f"timeout: killed {d.name}")
             break
         time.sleep(2)
+        rt.check_mod_loaded([(p, log, d) for p, log, d, _ in workers.values()])
         for k, (p, log, d, retry) in list(workers.items()):
             if p.poll() is None or retry >= 99:
                 continue
