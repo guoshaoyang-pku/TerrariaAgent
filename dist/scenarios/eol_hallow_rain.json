@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "hallow",
+  "time": "night",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "empress_of_light",
+  "max_duration_seconds": 420,
+  "name": "eol_hallow_rain"
+}

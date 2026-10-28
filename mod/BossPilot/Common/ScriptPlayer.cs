@@ -53,7 +53,8 @@ public sealed class ScriptPlayer : ModPlayer
 
     public override void Unload() => Reset();
 
-    public override void PreUpdate()
+    // SetControls: after vanilla input processing, so replayed inputs stick.
+    public override void SetControls()
     {
         if (!Loaded || AutoPilot.Enabled || !TrialRunner.Instance.Current.Equals(TrialRunner.Phase.Fighting)) return;
 

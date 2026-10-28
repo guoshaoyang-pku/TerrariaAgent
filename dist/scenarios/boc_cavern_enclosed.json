@@ -1,0 +1,12 @@
+{
+  "arena": "enclosed",
+  "biome": "crimson",
+  "time": "night",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "brain_of_cthulhu",
+  "max_duration_seconds": 360,
+  "name": "boc_cavern_enclosed"
+}

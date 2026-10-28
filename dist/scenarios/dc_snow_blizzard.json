@@ -1,0 +1,12 @@
+{
+  "arena": "natural",
+  "biome": "snow",
+  "time": "day",
+  "weather": "blizzard",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "deerclops",
+  "max_duration_seconds": 360,
+  "name": "dc_snow_blizzard"
+}

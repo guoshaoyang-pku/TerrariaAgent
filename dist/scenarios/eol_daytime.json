@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "hallow",
+  "time": "day",
+  "weather": "clear",
+  "loadout": "stage_plus",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "empress_of_light",
+  "max_duration_seconds": 300,
+  "name": "eol_daytime"
+}

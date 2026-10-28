@@ -1,0 +1,12 @@
+{
+  "arena": "bridge",
+  "biome": "underworld",
+  "time": "day",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "wall_of_flesh",
+  "max_duration_seconds": 480,
+  "name": "wof_bridge"
+}

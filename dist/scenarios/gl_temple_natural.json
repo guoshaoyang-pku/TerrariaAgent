@@ -1,0 +1,12 @@
+{
+  "arena": "natural",
+  "biome": "jungle",
+  "time": "day",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "golem",
+  "max_duration_seconds": 420,
+  "name": "gl_temple_natural"
+}

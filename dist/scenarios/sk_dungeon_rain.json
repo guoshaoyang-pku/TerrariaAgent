@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "dungeon",
+  "time": "night",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "skeletron",
+  "max_duration_seconds": 420,
+  "name": "sk_dungeon_rain"
+}

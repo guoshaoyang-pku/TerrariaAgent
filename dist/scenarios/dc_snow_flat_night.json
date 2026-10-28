@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "snow",
+  "time": "night",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "deerclops",
+  "max_duration_seconds": 360,
+  "name": "dc_snow_flat_night"
+}

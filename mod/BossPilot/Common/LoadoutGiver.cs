@@ -33,13 +33,14 @@ public static class LoadoutGiver
             p.armor[5].SetDefaults(ItemID.LeafWings);
         }
 
-        // Health floor so v0 trials are not one-shot checks.
+        // Health floor so v0 trials are not one-shot checks. tML recomputes
+        // statLifeMax from ConsumedLifeCrystals/Fruit every tick
+        // (PlayerLoader), so grant health through the consumption counters.
         int targetLife = hardmode ? 500 : 400;
-        if (p.statLifeMax2 < targetLife)
-        {
-            p.statLifeMax = p.statLifeMax2 = targetLife;
-            p.statLife = targetLife;
-        }
+        p.ConsumedLifeCrystals = 15;              // 100 + 15*20 = 400
+        p.ConsumedLifeFruit = hardmode ? 20 : 0;  // + 20*5 = 500 in hardmode
+        p.statLifeMax = targetLife;
+        p.statLife = targetLife;
 
         p.selectedItem = 0;
     }

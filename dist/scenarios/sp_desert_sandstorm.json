@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "desert",
+  "time": "night",
+  "weather": "sandstorm",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "skeletron_prime",
+  "max_duration_seconds": 480,
+  "name": "sp_desert_sandstorm"
+}

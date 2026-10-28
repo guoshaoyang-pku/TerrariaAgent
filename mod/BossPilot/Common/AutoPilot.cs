@@ -28,7 +28,9 @@ public sealed class AutoPilot : ModPlayer
     private int jumpCooldown;
     private float lastX;
 
-    public override void PreUpdate()
+    // SetControls runs after vanilla input processing, so our writes survive
+    // the frame. (PreUpdate writes get overwritten by PlayerInput.)
+    public override void SetControls()
     {
         if (!Enabled || TrialRunner.Instance.Current != TrialRunner.Phase.Fighting) return;
         if (Player.dead) return;

@@ -34,12 +34,27 @@ public sealed class TrialRunner : ModSystem
 
         Scenario = scenario;
         Result = null;
-        LoadoutGiver.Grant(Main.LocalPlayer, entry, scenario.Loadout);
-        ArenaBuilder.Build(scenario.Arena, scenario.Biome, Main.LocalPlayer.Center);
-        ApplyWorldFlags(scenario);
-        ApplyBuffs(scenario);
+        prepTicks = 0;
         Current = Phase.Preparing;
         return $"prepared {scenario.Name} ({entry.Name})";
+    }
+
+    private int prepTicks;
+
+    private void Prepare()
+    {
+        // Runs on the first world tick after spawn: the local player is real,
+        // positioned, and alive. Loadout/arena applied here, not in OnWorldLoad
+        // (which fires before the player object is the in-world one).
+        BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
+        Player p = Main.LocalPlayer;
+        Mod.Logger.Info($"[BossPilot] prepare: player#{p.GetHashCode()} active={p.active} hpMax(before)={p.statLifeMax}");
+        LoadoutGiver.Grant(p, entry, Scenario.Loadout);
+        Mod.Logger.Info($"[BossPilot] prepare: hpMax(after)={p.statLifeMax} weapon={p.inventory[0].type}");
+        ArenaBuilder.Build(Scenario.Arena, Scenario.Biome, p.Center);
+        ApplyWorldFlags(Scenario);
+        ApplyBuffs(Scenario);
+        BeginFight();
     }
 
     private void BeginFight()
@@ -56,6 +71,7 @@ public sealed class TrialRunner : ModSystem
         fightStartTick = (int)Main.GameUpdateCount;
         StateExport.Instance.Begin(Scenario.Name);
         Current = Phase.Fighting;
+        Mod.Logger.Info($"[BossPilot] fight start: {Scenario.Name}, boss npc id {entry.NpcId} -> slot {id}");
     }
 
     public override void PostUpdateEverything()
@@ -63,7 +79,11 @@ public sealed class TrialRunner : ModSystem
         switch (Current)
         {
             case Phase.Preparing:
-                BeginFight();
+                // Wait ~1s after world entry for the player to finish spawning.
+                if (++prepTicks >= 60 && Main.LocalPlayer is { active: true, dead: false })
+                    Prepare();
+                else if (prepTicks % 300 == 0)
+                    Mod.Logger.Info($"[BossPilot] preparing: paused={Main.gamePaused} netMode={Main.netMode} playerActive={Main.LocalPlayer?.active} dead={Main.LocalPlayer?.dead}");
                 break;
             case Phase.Fighting:
                 TickFight();
@@ -77,6 +97,9 @@ public sealed class TrialRunner : ModSystem
         bool bossGone = bossIndex < 0 || !Main.npc[bossIndex].active;
         double elapsed = (Main.GameUpdateCount - fightStartTick) / 60.0;
 
+        if ((int)Main.GameUpdateCount % 600 == 0)
+            Mod.Logger.Info($"[BossPilot] tick: player#{p.GetHashCode()} statLifeMax={p.statLifeMax} max2={p.statLifeMax2} hp={p.statLife}");
+
         if (bossGone) Finish("victory");
         else if (p.dead) Finish("death");
         else if (elapsed >= Scenario.MaxDurationSeconds) Finish("timeout");
@@ -87,6 +110,7 @@ public sealed class TrialRunner : ModSystem
         Result = result;
         StateExport.Instance.End();
         Main.NewText($"[BossPilot] {Scenario.Name}: {result}", Color.Orange);
+        Mod.Logger.Info($"[BossPilot] {Scenario.Name}: {result}");
         Current = Phase.Finished;
     }
 

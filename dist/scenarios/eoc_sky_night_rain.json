@@ -1,0 +1,12 @@
+{
+  "arena": "open_sky",
+  "biome": "forest",
+  "time": "night",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "eye_of_cthulhu",
+  "max_duration_seconds": 300,
+  "name": "eoc_sky_night_rain"
+}

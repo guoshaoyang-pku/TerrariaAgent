@@ -1,0 +1,12 @@
+{
+  "arena": "open_sky",
+  "biome": "ocean",
+  "time": "day",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "duke_fishron",
+  "max_duration_seconds": 420,
+  "name": "df_ocean_rain"
+}

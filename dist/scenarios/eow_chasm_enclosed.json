@@ -1,0 +1,12 @@
+{
+  "arena": "enclosed",
+  "biome": "corruption",
+  "time": "night",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "eater_of_worlds",
+  "max_duration_seconds": 360,
+  "name": "eow_chasm_enclosed"
+}

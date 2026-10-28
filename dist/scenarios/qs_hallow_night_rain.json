@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "hallow",
+  "time": "night",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "queen_slime",
+  "max_duration_seconds": 420,
+  "name": "qs_hallow_night_rain"
+}

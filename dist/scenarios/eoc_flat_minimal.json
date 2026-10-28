@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "forest",
+  "time": "night",
+  "weather": "clear",
+  "loadout": "min_preboss",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "eye_of_cthulhu",
+  "max_duration_seconds": 420,
+  "name": "eoc_flat_minimal"
+}

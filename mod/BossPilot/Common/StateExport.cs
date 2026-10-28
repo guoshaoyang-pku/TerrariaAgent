@@ -30,6 +30,8 @@ public sealed class StateExport : ModSystem
         runPath = Path.Combine(dir, $"{scenarioName}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl");
         writer = new StreamWriter(runPath);
         TicksSinceOpen = 0;
+        Player pl = Main.LocalPlayer;
+        Mod.Logger.Info($"[BossPilot] export begin: player#{pl?.GetHashCode()} hpMax={pl?.statLifeMax}/{pl?.statLifeMax2}");
     }
 
     public void End()

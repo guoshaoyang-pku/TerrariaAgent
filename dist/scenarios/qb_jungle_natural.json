@@ -1,0 +1,12 @@
+{
+  "arena": "natural",
+  "biome": "jungle",
+  "time": "day",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "queen_bee",
+  "max_duration_seconds": 360,
+  "name": "qb_jungle_natural"
+}

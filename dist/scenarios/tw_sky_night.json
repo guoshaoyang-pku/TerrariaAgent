@@ -1,0 +1,12 @@
+{
+  "arena": "open_sky",
+  "biome": "forest",
+  "time": "night",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "twins",
+  "max_duration_seconds": 480,
+  "name": "tw_sky_night"
+}

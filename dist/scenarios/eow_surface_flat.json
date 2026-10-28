@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "corruption",
+  "time": "day",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "eater_of_worlds",
+  "max_duration_seconds": 360,
+  "name": "eow_surface_flat"
+}

@@ -1,0 +1,12 @@
+{
+  "arena": "open_sky",
+  "biome": "space",
+  "time": "night",
+  "weather": "clear",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "destroyer",
+  "max_duration_seconds": 480,
+  "name": "dst_sky_night"
+}
