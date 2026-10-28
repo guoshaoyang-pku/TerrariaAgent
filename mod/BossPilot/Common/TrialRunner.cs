@@ -34,6 +34,7 @@ public sealed class TrialRunner : ModSystem
 
         Scenario = scenario;
         Result = null;
+        LoadoutGiver.Grant(Main.LocalPlayer, entry, scenario.Loadout);
         ArenaBuilder.Build(scenario.Arena, scenario.Biome, Main.LocalPlayer.Center);
         ApplyWorldFlags(scenario);
         ApplyBuffs(scenario);

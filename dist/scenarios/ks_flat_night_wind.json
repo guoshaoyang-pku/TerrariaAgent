@@ -1,0 +1,12 @@
+{
+  "arena": "flat_platforms",
+  "biome": "forest",
+  "time": "night",
+  "weather": "wind",
+  "loadout": "min_preboss",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "king_slime",
+  "max_duration_seconds": 240,
+  "name": "ks_flat_night_wind"
+}

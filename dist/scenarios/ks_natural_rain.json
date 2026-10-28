@@ -1,0 +1,12 @@
+{
+  "arena": "natural",
+  "biome": "forest",
+  "time": "day",
+  "weather": "rain",
+  "loadout": "stage_default",
+  "buffs": "none",
+  "rescue_budget_ms": 16,
+  "boss": "king_slime",
+  "max_duration_seconds": 240,
+  "name": "ks_natural_rain"
+}
