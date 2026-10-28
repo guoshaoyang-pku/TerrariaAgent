@@ -89,7 +89,9 @@ public static class ArenaSites
             // Ocean = within 380 tiles of a world edge, above the surface line.
             "ocean" => new Point(160, SurfaceAt(160)),
             "underworld" => new Point(spawnX, Main.maxTilesY - 110),
-            "space" => new Point(spawnX, (int)(Main.worldSurface * 0.25)),
+            // Just inside the sky layer (ZoneSkyHeight: y < 0.35 worldSurface). Higher leaves no headroom:
+            // Player.Update clamps the player at tile 41.
+            "space" => new Point(spawnX, (int)(Main.worldSurface * 0.35) - 1),
             "underground_jungle" => new Point(spawnX, (int)Main.rockLayer + 60),
             "dungeon" => new Point(Main.dungeonX, Main.dungeonY + 40),
             _ => new Point(spawnX, SurfaceAt(spawnX)),
@@ -98,11 +100,12 @@ public static class ArenaSites
 
     /// <summary>
     /// First solid tile from the top at column x. Platforms (solid-top) are skipped: otherwise the
-    /// next attempt is built on the previous arena's top platform row, over the cleared void.
+    /// next attempt is built on the previous arena's top platform row, over the cleared void. The scan
+    /// starts below the sky layer so a space arena's floor in the same column is not taken as ground.
     /// </summary>
     public static int SurfaceAt(int x)
     {
-        for (int y = 50; y < Main.worldSurface + 50; y++)
+        for (int y = (int)(Main.worldSurface * 0.4); y < Main.worldSurface + 50; y++)
         {
             Tile t = Main.tile[x, y];
             if (t.HasTile && Main.tileSolid[t.TileType] && !Main.tileSolidTop[t.TileType]) return y;

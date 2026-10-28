@@ -20,6 +20,8 @@ python3 scripts/run_trials.py --all --parallel 12
 ```
 
 首次运行会构建 Mod 到 `.runs/_build/`、生成小世界模板到 `.runs/_world/`（约 3 分钟，之后复用）。
+某个 worker 中途退出（端口被抢、被外部进程杀掉）时，会在新的世界副本上带着它还欠的尝试重启，最多 3 次；
+旧日志改名为 `server.<n>.log`。
 结果：`.runs/<run>/w<k>/out/results.jsonl`（每次尝试一行）、`.runs/<run>/summary.json`；
 6 Hz 状态快照在同目录 `*.jsonl`，可离线可视化。
 
@@ -52,7 +54,8 @@ python3 scripts/run_trials.py --all --parallel 12
 （饰品加成稍后才加回），所以 `Control` 里读到的是基础值；需要真实值时在 `ModPlayer.PostUpdateRunSpeeds` 缓存。
 
 `Main.hardMode` 每次试炼开始按 `BossCatalog` 的 `Hardmode` 设定，方案可在 `ArenaSite`/`GrantLoadout` 里覆盖。
-`ArenaSites.SurfaceAt` 跳过平台（否则下一次尝试会建在上一场的顶层平台上）。
+`ArenaSites.SurfaceAt` 从太空层以下开始找、跳过平台（否则下一次尝试会建在上一场的顶层平台或太空场地上）；
+太空场地放在太空层下沿（`0.35 × worldSurface`），玩家在第 41 格以上会被钳住。
 
 ## 无头模式已处理的坑（`Common/Headless/`）
 

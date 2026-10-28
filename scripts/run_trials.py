@@ -119,11 +119,19 @@ def launch(k, run_dir, scenarios, attempts, tmod, wld):
     return p, log, d
 
 
-def port_taken(d):
+def remaining(d, scenarios, attempts):
+    """Attempts a worker still owes, one job entry per attempt, from the rows it has written."""
     results = d / "out" / "results.jsonl"
-    if results.exists() and results.stat().st_size:
-        return False
-    return "Address already in use" in (d / "server.log").read_text(errors="replace")
+    done = defaultdict(int)
+    if results.exists():
+        for line in results.read_text().splitlines():
+            if line.strip():
+                done[json.loads(line)["scenario"]] += 1
+    todo = []
+    for s in scenarios:
+        todo += [s] * max(0, attempts - done[s["name"]])
+        done[s["name"]] = max(0, done[s["name"]] - attempts)
+    return todo
 
 
 def summarise(run_dir):
@@ -184,13 +192,19 @@ def main():
     retries = [0] * n
     while True:
         for k, (p, log, d) in enumerate(workers):
-            # free_port() releases its probe socket before the server binds it, so another runner on
-            # this machine can take the port first; the server then exits before running any attempt.
-            if p.poll() is not None and retries[k] < 3 and port_taken(d):
-                log.close()
-                retries[k] += 1
-                print(f"{d.name}: port taken, relaunching ({retries[k]}/3)", flush=True)
-                workers[k] = launch(k, run_dir, chunks[k], a.attempts, tmod, wld)
+            # A worker can stop before its job is done: free_port() releases its probe socket before the
+            # server binds it, so another runner can take the port first, and other tools on this machine
+            # may kill tModLoader processes. Relaunch it on a fresh world copy with what it still owes.
+            if p.poll() is None or retries[k] >= 3:
+                continue
+            todo = remaining(d, chunks[k], a.attempts)
+            if not todo:
+                continue
+            log.close()
+            retries[k] += 1
+            shutil.move(d / "server.log", d / f"server.{retries[k]}.log")
+            print(f"{d.name} exited {p.returncode} with {len(todo)} attempts left, relaunching ({retries[k]}/3)", flush=True)
+            workers[k] = launch(k, run_dir, todo, 1, tmod, wld)
         if all(p.poll() is not None for p, _, _ in workers):
             break
         if time.time() > deadline:
