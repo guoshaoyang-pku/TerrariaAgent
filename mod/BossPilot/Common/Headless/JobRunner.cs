@@ -45,8 +45,17 @@ public sealed class JobRunner
         return new JobRunner(spec, outDir);
     }
 
+    // World progress (NPC.downedBoss3, downedMechBoss1...) as loaded from the template world. A kill
+    // sets these, and they change spawns and AI (Dungeon Guardians, Golem's Martian probes), so every
+    // attempt starts from the template's values.
+    private static readonly System.Reflection.FieldInfo[] progressFlags = Array.FindAll(
+        typeof(NPC).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static),
+        f => f.FieldType == typeof(bool) && f.Name.StartsWith("downed"));
+    private object[] templateProgress;
+
     public void Begin()
     {
+        templateProgress = Array.ConvertAll(progressFlags, f => f.GetValue(null));
         Started = true;
         StartAttempt();
     }
@@ -113,8 +122,9 @@ public sealed class JobRunner
         Console.WriteLine("[BossPilot] " + line);
     }
 
-    private static void ResetWorld()
+    private void ResetWorld()
     {
+        for (int i = 0; i < progressFlags.Length; i++) progressFlags[i].SetValue(null, templateProgress[i]);
         foreach (NPC n in Main.npc)
             if (n.active && !n.townNPC) n.active = false;
         foreach (Projectile pr in Main.projectile) pr.active = false;

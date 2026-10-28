@@ -26,6 +26,9 @@ python3 scripts/run_trials.py --all --parallel 12
 每行字段：`result`（victory / death / timeout / despawn / spawn_failed / crash:…）、`seconds`（游戏内秒）、
 `hits`、`damage_taken`、`boss_hp_frac`、`plan`、`speedup`。
 
+`victory` 要求某个被追踪的 NPC 以 `npc.boss == true` 死亡（内核自己的击败标记：双子只有后死的那只、
+世吞只有最后一节带这个标记，拳头/手/飞眼怪从不带）。打掉部件后 Boss 脱战消失记为 `despawn`。
+
 ## 写一个 Boss 方案
 
 在 `mod/BossPilot/Bosses/` 下每个 Boss 一个文件，继承 `Common/BossPlan.cs` 的 `BossPlan`，按 `Boss` 键
@@ -55,7 +58,8 @@ python3 scripts/run_trials.py --all --parallel 12
 
 服务端从不初始化客户端子系统，而 `netMode = 0` 会让原本只在客户端跑的代码执行。已修：
 光照引擎（Legacy 模式，有上限）、相机视图矩阵、屏幕滤镜/天空/覆盖层占位（`NullEffects`）、
-成就管理器、`Main.hasFocus`（否则 `SetControls` 不被调用）、网络线程会把无客户端的玩家槽设为不活跃、
+成就管理器、`Main.hasFocus`（否则 `SetControls` 不被调用）、群落判定（`SceneMetrics` 只由客户端光照引擎
+每 4 帧重扫，无头时每 4 tick 调 `ForceUpdateBiomes`，否则丛林/腐化/猩红/雪原等 Zone 一直是出生点的值）、网络线程会把无客户端的玩家槽设为不活跃、
 云/血肉/伤害数字/拾取文字/RGB 键盘、死亡时存档线程崩溃、致命错误弹窗。
 新出现的问题看 `out/exception_counts.json`：除 `Throw.OutOfBounds`（tML 日志钩子）和网络类异常外应为空；
 任何 `Main.DoUpdate`/`Player.Update` 下的异常都意味着该 tick 被截断，结果不可信。

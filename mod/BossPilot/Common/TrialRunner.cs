@@ -85,6 +85,10 @@ public sealed class TrialRunner : ModSystem
         Player p = Main.LocalPlayer;
         if (Plan != null) Plan.SpawnBoss(p, Scenario);
         else BossPlan.SpawnAbove(p, BossCatalog.Bosses[Scenario.Boss].NpcId, 25);
+        // This runs after the tick's NPC pass counted spawn slots, so the next NPC.SpawnNPC would see
+        // none taken (e.g. a Dungeon Guardian roll beside Skeletron). Credit the boss's slots now.
+        foreach (NPC n in Main.npc)
+            if (n.active && trackedTypes.Contains(n.type)) p.nearbyActiveNPCs += n.npcSlots;
         StateExport.Instance.Begin(Scenario.Name);
         Current = Phase.Fighting;
     }
