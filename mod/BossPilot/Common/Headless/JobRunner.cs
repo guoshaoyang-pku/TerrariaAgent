@@ -14,17 +14,20 @@ namespace BossPilot.Common.Headless;
 /// `attempts` times; each attempt appends one row to results.jsonl in the out
 /// dir and one line to stdout. Between attempts the pilot is healed, buffs
 /// and hostile entities are cleared, and the arena is rebuilt.
+/// Jobs with "kind": "explore" are handed to Explore.ExploreRunner instead (natural world, no arena).
 /// </summary>
 public sealed class JobRunner
 {
     public sealed class Job
     {
+        [JsonPropertyName("kind")] public string Kind { get; init; } = "boss";
         [JsonPropertyName("scenarios")] public List<ScenarioConfig> Scenarios { get; init; } = [];
         [JsonPropertyName("attempts")] public int Attempts { get; init; } = 1;
     }
 
     private readonly Job spec;
     private readonly StreamWriter results;
+    private readonly Explore.ExploreRunner explore;
     private readonly Stopwatch attemptClock = new();
     private int scenarioIndex;
     private int attempt;
@@ -38,21 +41,37 @@ public sealed class JobRunner
         results = new StreamWriter(Path.Combine(outDir, "results.jsonl"), append: true) { AutoFlush = true };
     }
 
+    private JobRunner(Explore.ExploreRunner explore) => this.explore = explore;
+
     public static JobRunner Load(string path, string outDir)
     {
-        Job spec = JsonSerializer.Deserialize<Job>(File.ReadAllText(path),
+        string json = File.ReadAllText(path);
+        Job spec = JsonSerializer.Deserialize<Job>(json,
             new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+        if (spec.Kind == "explore") return new JobRunner(Explore.ExploreRunner.Load(json, outDir));
         return new JobRunner(spec, outDir);
     }
 
     public void Begin()
     {
         Started = true;
+        if (explore != null)
+        {
+            explore.Begin();
+            Done = explore.Done;
+            return;
+        }
         StartAttempt();
     }
 
     public void AfterTick()
     {
+        if (explore != null)
+        {
+            explore.AfterTick();
+            Done = explore.Done;
+            return;
+        }
         if (TrialRunner.Instance.Current != TrialRunner.Phase.Finished) return;
         Record(TrialRunner.Instance.Result);
         TrialRunner.Instance.Abort();
@@ -83,6 +102,12 @@ public sealed class JobRunner
     public void Fail(string reason)
     {
         if (Done) return;
+        if (explore != null)
+        {
+            explore.Fail(reason);
+            Done = true;
+            return;
+        }
         if (scenarioIndex < spec.Scenarios.Count) Record("crash: " + reason);
         Done = true;
         results.Dispose();
