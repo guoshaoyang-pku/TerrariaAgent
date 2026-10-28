@@ -121,8 +121,9 @@ internal static class Landmarks
         int ws = (int)Main.worldSurface, rock = (int)Main.rockLayer, under = Main.UnderworldLayer, maxX = Main.maxTilesX, maxY = Main.maxTilesY;
         switch (target)
         {
-            case "ocean_left": return new BoxGoal(41, 0, WorldGen.beachDistance - 40, (int)WorldGen.oceanLevel - 2);
-            case "ocean_right": return new BoxGoal(maxX - WorldGen.beachDistance + 40, 0, maxX - 43, (int)WorldGen.oceanLevel - 2);
+            // ZoneBeach holds down to oceanLevel, but the beach is a surface walk: keep the goal above worldSurface.
+            case "ocean_left": return new BoxGoal(41, 0, WorldGen.beachDistance - 40, ws);
+            case "ocean_right": return new BoxGoal(maxX - WorldGen.beachDistance + 40, 0, maxX - 43, ws);
             case "dungeon": return new BoxGoal(Main.dungeonX - 6, Main.dungeonY - 8, Main.dungeonX + 5, Main.dungeonY + 4);
             case "underground": return new BoxGoal(41, ws + 4, maxX - 43, rock - 2);
             case "cavern": return new BoxGoal(41, rock + 4, maxX - 43, under - 2);

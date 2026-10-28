@@ -17,6 +17,8 @@ public sealed class ExploreJob
     /// <summary>Natural hostile spawns. Off = the Spec's early "small dodges avoid monsters" simplification.</summary>
     [JsonPropertyName("spawns")] public bool Spawns { get; init; }
     [JsonPropertyName("kit")] public KitSpec Kit { get; init; } = new();
+    /// <summary>Swing the kit weapon at hostiles in reach when no tool is in use (matters with spawns on).</summary>
+    [JsonPropertyName("defend")] public bool Defend { get; init; } = true;
     /// <summary>"day" or "night" at the start of every spawn-started task.</summary>
     [JsonPropertyName("time")] public string Time { get; init; } = "day";
     /// <summary>Write a 6 Hz position trace per attempt.</summary>

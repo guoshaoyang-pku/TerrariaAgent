@@ -40,7 +40,7 @@ internal sealed class Navigator
     private readonly Dictionary<(long, long), int> searchFails = [];
     private bool committed;
     private PolicyRun run;
-    private Vector2[] pred = new Vector2[160], predBest = new Vector2[160], predTmp = new Vector2[160];
+    private Vector2[] pred = new Vector2[250], predBest = new Vector2[250], predTmp = new Vector2[250];
     private int predLen, runT;
     private Point committedLanding;
 
@@ -190,10 +190,16 @@ internal sealed class Navigator
             if (node == stuckNode) stuckCount++;
             else stuckCount = 1;
             stuckNode = node;
-            if (stuckCount >= 4)
+            if (stuckCount >= 6)
             {
                 Failure = "stuck";
                 return;
+            }
+            // The same plan would fail the same way: ban the edge being attempted, then replan.
+            if (idx >= 0 && idx + 1 < path.Count)
+            {
+                Log?.Invoke($"no progress on {path[idx]}->{path[idx + 1]}; banning edge\n{Dump(node.X, node.Y)}");
+                Planner.BannedEdges.Add((NavGrid.Key(path[idx].X, path[idx].Y), NavGrid.Key(path[idx + 1].X, path[idx + 1].Y)));
             }
             Replan("no progress");
             return;
@@ -210,6 +216,7 @@ internal sealed class Navigator
             Replan(pathToGoal ? "end without arrival" : "horizon reached");
             return;
         }
+
 
         Planner.Step next = path[idx + 1];
         Planner.Step cur = path[idx];
@@ -233,10 +240,10 @@ internal sealed class Navigator
         {
             case Planner.Move.Walk:
             case Planner.Move.StepUp:
-                Walk(p, node, next.X, dir, SpeedCap());
+                Steer(p, node, next, dir, SpeedCap());
                 break;
             case Planner.Move.Fall:
-                Walk(p, node, next.X, dir, 2.2f);
+                Steer(p, node, next, dir, 2.2f);
                 break;
             case Planner.Move.Jump:
                 if (p.wet && !p.lavaWet)
@@ -525,6 +532,17 @@ internal sealed class Navigator
         else p.controlLeft = true;
     }
 
+    /// <summary>
+    /// Walk by the body's continuous position, not the rounded node: head for the next node's centre
+    /// (keeping the edge direction once there), so a body matched to a neighbouring column still converges.
+    /// </summary>
+    private void Steer(Player p, Point node, Planner.Step next, int dir, float cap)
+    {
+        float dx = (next.X + 1) * 16f - p.Center.X;
+        int d = Math.Abs(dx) < 4f ? dir : Math.Sign(dx);
+        Walk(p, node, next.X, d, d == dir ? cap : 1.5f);
+    }
+
     private static void HoldToward(Player p, int targetX, Point node)
     {
         int d = Math.Sign(targetX - node.X);
@@ -645,7 +663,7 @@ internal sealed class Navigator
     {
         var run = new PolicyRun(pol);
         int t = 0, hurtTicks = 0;
-        const int maxT = 150;
+        const int maxT = 240;
         bool startedAir = airborne;
         for (; t < maxT && t < traj.Length - 1; t++)
         {
@@ -675,7 +693,9 @@ internal sealed class Navigator
                     near = true;
                 }
         // No-hit is the objective: 10 HP of fall damage outweighs 25 nodes of progress.
-        float pen = (near ? 6f : 0f) + t * 0.05f + s.Damage * 25f + hurtTicks * 150f + (s.WasWet ? 3f : 0f) + (s.Vel.Y == 0f ? 0f : 4f);
+        // A rollout still falling at the horizon is charged the fall damage it has already accrued, and more.
+        int pending = s.Vel.Y != 0f && !s.WasWet ? Math.Max(0, (int)(s.Pos.Y / 16f) - s.FallStart - 25) * 10 : 0;
+        float pen = (near ? 6f : 0f) + t * 0.05f + (s.Damage + pending) * 25f + hurtTicks * 150f + (s.WasWet ? 3f : 0f) + (s.Vel.Y == 0f ? 0f : 40f);
         if (matched >= 0)
         {
             r.Matched = matched;

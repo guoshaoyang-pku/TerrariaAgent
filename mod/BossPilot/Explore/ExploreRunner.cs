@@ -94,6 +94,33 @@ public sealed class ExploreRunner
         if (cur == null || Done || cur.Exec.Result != null || p.dead) return;
         Navigator.ClearControls(p);
         cur.Exec.Control(p);
+        if (job.Defend) Defend(p);
+    }
+
+    /// <summary>
+    /// Minimal melee reflex (no fight planning): when a hostile is within sword reach and the task is not
+    /// using a tool this tick, swing the kit weapon at it. Movement keys are left to the navigator.
+    /// </summary>
+    private static void Defend(Player p)
+    {
+        if (p.controlUseItem || p.itemAnimation > 0 && p.selectedItem != Kit.WeaponSlot || p.inventory[Kit.WeaponSlot].IsAir) return;
+        NPC target = null;
+        float best = 5f * 16f;
+        foreach (NPC n in Main.npc)
+        {
+            if (!n.active || n.friendly || n.townNPC || n.damage <= 0 || n.dontTakeDamage || n.lifeMax <= 5) continue;
+            float d = Vector2.Distance(n.Center, p.Center);
+            if (d < best && Collision.CanHit(p.position, p.width, p.height, n.position, n.width, n.height))
+            {
+                best = d;
+                target = n;
+            }
+        }
+        if (target == null) return;
+        if (p.itemAnimation == 0) p.selectedItem = Kit.WeaponSlot;
+        Main.mouseX = (int)(target.Center.X - Main.screenPosition.X);
+        Main.mouseY = (int)(target.Center.Y - Main.screenPosition.Y);
+        p.controlUseItem = true;
     }
 
     public void NoteHurt(int damage, string source)
