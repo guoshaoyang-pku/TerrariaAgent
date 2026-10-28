@@ -18,6 +18,9 @@ public sealed class StateExport : ModSystem
 
     private StreamWriter writer;
     private string runPath;
+    private int serial;
+
+    public string RunPath => runPath;
 
     public bool Active => writer != null;
     public int TicksSinceOpen { get; private set; }
@@ -25,9 +28,10 @@ public sealed class StateExport : ModSystem
     public void Begin(string scenarioName)
     {
         End();
-        string dir = Path.Combine(ModLoader.ModPath, "BossPilot", "runs");
+        string dir = Headless.HeadlessSim.OutDir ?? Path.Combine(ModLoader.ModPath, "BossPilot", "runs");
         Directory.CreateDirectory(dir);
-        runPath = Path.Combine(dir, $"{scenarioName}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl");
+        // Serial suffix: headless attempts run faster than one per second.
+        runPath = Path.Combine(dir, $"{scenarioName}-{DateTime.Now:yyyyMMdd-HHmmss}-{++serial}.jsonl");
         writer = new StreamWriter(runPath);
         TicksSinceOpen = 0;
     }
@@ -55,11 +59,22 @@ public sealed class StateExport : ModSystem
                 vx = p.velocity.X, vy = p.velocity.Y,
                 hp = p.statLife, hp_max = p.statLifeMax2,
                 dead = p.dead,
+                item = p.HeldItem.type, use = p.controlUseItem, anim = p.itemAnimation,
+                aim_x = Main.MouseWorld.X / 16f, aim_y = Main.MouseWorld.Y / 16f,
             },
             boss = TrialRunner.Instance.ActiveBossJson(),
             projectiles = CountHostileProjectiles(),
+            friendly = CountFriendlyProjectiles(),
         };
         writer.WriteLine(JsonSerializer.Serialize(payload));
+    }
+
+    private static int CountFriendlyProjectiles()
+    {
+        int n = 0;
+        foreach (Projectile proj in Main.projectile)
+            if (proj.active && proj.friendly && proj.owner == Main.myPlayer) n++;
+        return n;
     }
 
     private static int CountHostileProjectiles()

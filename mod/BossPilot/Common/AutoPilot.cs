@@ -28,12 +28,15 @@ public sealed class AutoPilot : ModPlayer
     private int jumpCooldown;
     private float lastX;
 
-    public override void PreUpdate()
+    // SetControls, not PreUpdate: Player.Update resets controls from input between the two.
+    public override void SetControls()
     {
-        if (!Enabled || TrialRunner.Instance.Current != TrialRunner.Phase.Fighting) return;
-        if (Player.dead) return;
+        TrialRunner trial = TrialRunner.Instance;
+        if (trial.Current != TrialRunner.Phase.Fighting || Player.dead || Player.whoAmI != Main.myPlayer) return;
 
         NPC boss = FindBoss();
+        if (trial.Plan != null && trial.Plan.Control(Player, boss, trial.Context)) return;
+        if (!Enabled) return;
         Vector2 pos = Player.Center;
         Vector2 vel = Player.velocity;
 

@@ -1,5 +1,6 @@
 using Terraria;
 using Terraria.ID;
+using Terraria.ModLoader;
 
 namespace BossPilot.Common;
 
@@ -34,14 +35,24 @@ public static class LoadoutGiver
         }
 
         // Health floor so v0 trials are not one-shot checks.
-        int targetLife = hardmode ? 500 : 400;
-        if (p.statLifeMax2 < targetLife)
-        {
-            p.statLifeMax = p.statLifeMax2 = targetLife;
-            p.statLife = targetLife;
-        }
+        SetMaxStats(p, life: hardmode ? 500 : 400);
 
         p.selectedItem = 0;
+    }
+
+    /// <summary>
+    /// Grants max life/mana as consumed crystals and fruit. tModLoader recomputes
+    /// statLifeMax from these every tick (PlayerLoader.ResetMaxStatsToVanilla), so
+    /// writing statLifeMax directly is undone on the next update.
+    /// </summary>
+    public static void SetMaxStats(Player p, int life, int mana = 20)
+    {
+        p.ConsumedLifeCrystals = (life - 100) / 20;
+        p.ConsumedLifeFruit = (life - 400) / 5;
+        p.ConsumedManaCrystals = (mana - 20) / 20;
+        PlayerLoader.ResetMaxStatsToVanilla(p);
+        p.statLife = p.statLifeMax2 = p.statLifeMax;
+        p.statMana = p.statManaMax2 = p.statManaMax;
     }
 
     private static void Give(Player p, int type, int stack)
