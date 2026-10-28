@@ -80,6 +80,9 @@ public abstract class PilotPlan : BossPlan
             }
         }
 
+        // Quick heal (the Quick Heal key's own routine; controlQuickHeal is read before SetControls).
+        if (p.statLife < p.statLifeMax2 / 2 && p.potionDelay == 0) p.QuickHeal();
+
         Vector2? aim = AimTarget(p, out Vector2 tv);
         if (aim is Vector2 a)
         {

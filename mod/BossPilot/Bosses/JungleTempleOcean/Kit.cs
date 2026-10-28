@@ -29,6 +29,9 @@ public static class Kits
         p.inventory[54].stack = p.inventory[54].maxStack;
         p.inventory[55].SetDefaults(kit.Ammo);
         p.inventory[55].stack = p.inventory[55].maxStack;
+        // Every speedrunner carries healing potions; the pilot quaffs one below half life.
+        p.inventory[9].SetDefaults(ItemID.GreaterHealingPotion);
+        p.inventory[9].stack = 10;
         for (int i = 0; i < kit.Armor.Length && i < 3; i++) p.armor[i].SetDefaults(kit.Armor[i]);
         for (int i = 0; i < kit.Accessories.Length && i < 5; i++) p.armor[3 + i].SetDefaults(kit.Accessories[i]);
         p.selectedItem = 0;
