@@ -20,9 +20,6 @@ public abstract class MechPlan : BossPlan
     public override void GrantLoadout(Player p, ScenarioConfig s)
     {
         MechKit.Grant(p, s);
-        // Ammo experiment switch: MECHS_AMMO=holy puts Holy Arrows first.
-        if (Environment.GetEnvironmentVariable("MECHS_AMMO") == "holy" && s.Loadout != "min_preboss")
-            MechKit.Put(p, 54, ItemID.HolyArrow, 999);
         planner.Reset();
         patrolDir = 1;
     }
@@ -127,7 +124,10 @@ public abstract class MechPlan : BossPlan
         Vector2 a = aimSeen[i] + 1 == Main.GameUpdateCount ? v - aimDisp[i] : Vector2.Zero;
         aimDisp[i] = v; aimSeen[i] = Main.GameUpdateCount;
         if (a.LengthSquared() > 0.25f) a = Vector2.Normalize(a) * 0.5f;
-        FightContext.Aim(Aiming.DaedalusLead(p, target.Center, v, a, Aiming.ArrowSpeed(p)));
+        if (p.HeldItem.type == ItemID.DaedalusStormbow)
+            FightContext.Aim(Aiming.DaedalusLead(p, target.Center, v, a, Aiming.ArrowSpeed(p)));
+        else
+            FightContext.Aim(Aiming.DirectLead(p, target.Center, v, 26f)); // Marrow (min_preboss)
         p.controlUseItem = true;
     }
 

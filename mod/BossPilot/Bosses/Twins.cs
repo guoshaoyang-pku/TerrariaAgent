@@ -20,10 +20,12 @@ namespace BossPilot.Bosses;
 /// Spazmatism chases at 4 px/tick to 180 px beside the pilot with a flamethrower
 /// (~360 px reach, 66 px box) and dashes 6x at 14 for 400 ticks. Both flee at day.
 ///
-/// Control: MPC planner over all of that, with a patrol goal so aimed shots trail behind,
-/// and a standoff from Spazmatism's flamethrower once it has transformed. Retinazer dies
-/// first: its first-form laser is the only noisy (unschedulable) shot, its second form's
-/// lasers are exact, and Spazmatism's second form then never overlaps a living Retinazer.
+/// Control: MPC planner over all of that - every laser, cursed flame, flamethrower burst and
+/// dash is scheduled from the AI timers and aimed at each plan's own future position - with
+/// a patrol goal so aimed shots trail behind. While Spazmatism transforms or flames, the goal
+/// runs for the arena end with the most room (it chases at only 4 px/tick). Retinazer dies
+/// first (measured 1-2 vs 2-4 hits): its first-form laser is the only noisy shot, its second
+/// form's lasers are exact, and Spazmatism's second form then never overlaps a live Retinazer.
 /// </summary>
 public sealed class Twins : MechPlan
 {
@@ -88,14 +90,10 @@ public sealed class Twins : MechPlan
         return cost;
     }
 
-    // Kill order experiment switch (MECHS_TWIN_ORDER=spaz|ret); see the class summary for the default.
-    private static readonly bool SpazFirst = Environment.GetEnvironmentVariable("MECHS_TWIN_ORDER") == "spaz";
-
     private static NPC PickTarget(Player p, NPC ret, NPC spaz)
     {
-        NPC first = SpazFirst ? spaz : ret, second = SpazFirst ? ret : spaz;
-        if (first != null && first.Center.Y > p.Center.Y - 560f) return first;
-        if (second != null && second.Center.Y > p.Center.Y - 560f) return second;
-        return first ?? second;
+        if (ret != null && ret.Center.Y > p.Center.Y - 560f) return ret;
+        if (spaz != null && spaz.Center.Y > p.Center.Y - 560f) return spaz;
+        return ret ?? spaz;
     }
 }

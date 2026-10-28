@@ -19,7 +19,7 @@ namespace BossPilot.Bosses.Mechs;
 /// Magic Quiver + Ranger Emblem, 400 HP (15 crystals; life fruit needs a mech kill),
 /// the usual pre-fight potions (Calming against wyverns/harpies over sky arenas) and
 /// Greater Healing Potions.
-/// min_preboss drops to Marrow + Jester's Arrows, Cobalt armor, Angel Wings, Hermes Boots.
+/// min_preboss drops to Marrow + Jester's Arrows, Mythril armor, Angel Wings, Hermes Boots.
 /// stage_plus is one mech later: Hallowed armor, Avenger Emblem, Leaf Wings, 500 HP.
 /// No bottles/balloons: extra jumps make the pilot's flight model ambiguous.
 /// </summary>
@@ -37,9 +37,9 @@ public static class MechKit
             case "min_preboss":
                 Put(p, 0, ItemID.Marrow);
                 Put(p, 54, ItemID.JestersArrow, 999);
-                Armor(p, ItemID.CobaltMask, ItemID.CobaltBreastplate, ItemID.CobaltLeggings);
+                Armor(p, ItemID.MythrilHat, ItemID.MythrilChainmail, ItemID.MythrilGreaves);
                 Accessories(p, ItemID.AngelWings, ItemID.HermesBoots, ItemID.LuckyHorseshoe, ItemID.RangerEmblem);
-                Put(p, 10, ItemID.HealingPotion, 15);
+                Put(p, 10, ItemID.GreaterHealingPotion, 15);
                 LoadoutGiver.SetMaxStats(p, 400);
                 Buffs(p, BuffID.Ironskin, BuffID.Regeneration);
                 break;

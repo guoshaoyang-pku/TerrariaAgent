@@ -24,9 +24,9 @@ namespace BossPilot.Bosses;
 /// the Mechanical Worm is used), the space arena's 10-tile stone floor becomes a platform
 /// row (stone would let the head steer right under the pilot), and the enclosed box gets
 /// one platform row 6 tiles under its ceiling; in there the Adamantite Repeater fires
-/// Jester's Arrows straight at the body, since the ceiling stops Daedalus arrows. Spawned
-/// 80 tiles below the pilot, like an off-screen
-/// summon: below and outside the 1000 px box it homes upward.
+/// Jester's Arrows straight at the body, since the ceiling stops Daedalus arrows, and the
+/// pilot holds the end of the row away from the head. Spawned 80 tiles below the pilot,
+/// like an off-screen summon: below and outside the 1000 px box it homes upward.
 ///
 /// Control: the WormPredictor rolls the head forward with AI_037's own rules and slides
 /// the body along its trail; the MPC planner dodges that chain, Probes, their scheduled
@@ -38,9 +38,9 @@ public sealed class Destroyer : MechPlan
     public override string Boss => "destroyer";
 
     private const int BridgeHeight = 80;
-    // Enclosed-box layout experiment switch (MECHS_ENC=rows3|high|none) and the high row's height.
-    private static readonly string EncLayout = Environment.GetEnvironmentVariable("MECHS_ENC") ?? "high";
-    private static readonly int EncHigh = Environment.GetEnvironmentVariable("MECHS_ENC_H") is string h ? int.Parse(h) : 44;
+    // The enclosed box's stand row: 6 tiles under its ceiling (best of rows at 24/34/44 and
+    // three rows at 12/24/36; standing on the floor was worst - the head homes underground).
+    private const int EncHigh = 44;
     private readonly WormPredictor worm = new();
     private float standY;      // world Y of the surface the pilot fights on
     private float spanL, spanR;
@@ -75,12 +75,8 @@ public sealed class Destroyer : MechPlan
                     WorldGen.KillTile(x, y, fail: false, effectOnly: false, noItem: true);
             Platforms(site.X - 80, site.X + 80, site.Y);
         }
-        if (s.Arena == "enclosed")
-        {
-            if (EncLayout == "rows3") for (int r = 1; r <= 3; r++) Platforms(site.X - 48, site.X + 48, site.Y - 12 * r);
-            else if (EncLayout == "high") Platforms(site.X - 48, site.X + 48, site.Y - EncHigh);
-        }
-        int stand = Bridge(s) ? site.Y - BridgeHeight : s.Arena == "enclosed" && EncLayout == "high" ? site.Y - EncHigh : site.Y;
+        if (s.Arena == "enclosed") Platforms(site.X - 48, site.X + 48, site.Y - EncHigh);
+        int stand = Bridge(s) ? site.Y - BridgeHeight : s.Arena == "enclosed" ? site.Y - EncHigh : site.Y;
         MechKit.PeaceCandles(site.X, stand);
     }
 
@@ -134,6 +130,10 @@ public sealed class Destroyer : MechPlan
             if (n.active && n.type == NPCID.Probe && Vector2.DistanceSquared(n.Center, p.Center) < 900f * 900f)
                 ShotSchedule.Probe(n, th);
         float patrol = PatrolTarget(p, 320f);
+        // In the box, hold the end of the high row away from the head: a head leaving the floor
+        // cannot arc that far up and sideways, and fewer segments have line of sight there.
+        if (ctx.Scenario.Arena == "enclosed" && worm.Head >= 0)
+            patrol = Main.npc[worm.Head].Center.X > (spanL + spanR) / 2f ? spanL + 96f : spanR - 96f;
         planner.Goal = (s, t) => Goal(s, t, patrol);
         planner.Drive(p);
         NPC target = Intruder(p) ?? PickTarget(p);
@@ -164,9 +164,8 @@ public sealed class Destroyer : MechPlan
         if (s.X > spanR - 64f) cost += (s.X - spanR + 64f) / 6f;
         float alt = (standY - s.Y - PilotModel.HalfH) / 16f;
         bool box = ctx.Scenario.Arena == "enclosed";
-        float lo = box ? 12f : -0.5f, hi = box ? 38f : 8f;
-        if (box && EncLayout == "high") { lo = EncHigh - 0.5f; hi = EncHigh + 4f; }
-        else if (box && EncLayout == "none") { lo = -0.5f; hi = 10f; }
+        float lo = box ? EncHigh - 0.5f : -0.5f, hi = box ? EncHigh + 4f : 8f;
+        // Below the stand (bridge or the box's high row) is where the body and its lasers are.
         if (alt < lo) cost += (lo - alt) * (box ? 0.8f : 3f);
         if (alt > hi) cost += (alt - hi) * 0.8f;
         if (!s.Ground && s.Wing < 30f) cost += (30f - s.Wing) * 0.05f * Math.Max(0f, alt - lo);
