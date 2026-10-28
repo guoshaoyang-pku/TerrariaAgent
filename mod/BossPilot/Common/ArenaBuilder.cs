@@ -23,11 +23,18 @@ public static class ArenaBuilder
                 break;
             case "open_sky":
                 Flatten(origin, width: 160, height: 80);
+                // Vertical juking needs somewhere to drop from/onto: a pure
+                // void arena collapses every dodge onto one ground plane.
+                Platforms(origin, width: 160, rows: 3, gap: 14);
                 break;
             case "enclosed":
-                Flatten(origin, width: 100, height: 50);
-                PaintBiomeFloor(origin, biome, width: 100);
-                Box(origin, width: 100, height: 50);
+                // 160×60: a 100×50 shoebox is smaller than the destroyer's
+                // own body — the worm literally fills it. Wide enough that
+                // coils cross the box one lane at a time.
+                Flatten(origin, width: 160, height: 60);
+                PaintBiomeFloor(origin, biome, width: 160);
+                Platforms(origin, width: 160, rows: 4, gap: 12);
+                Box(origin, width: 160, height: 60);
                 break;
             case "bridge":
                 // Wall of Flesh style: one long horizontal runway. The wall

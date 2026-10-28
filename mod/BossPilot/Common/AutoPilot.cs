@@ -48,12 +48,24 @@ public sealed class AutoPilot : ModPlayer
         if (Player.dead) return;
 
         NPC boss = FindBoss();
+        // Twins focus-fire: nearest-targeting alternates between the two and
+        // leaves both alive forever; the meta is to burn one down. Retinazer
+        // phase 2 is a laser barrage that only gets denser — kill it early.
+        if (boss != null && boss.type is 125 or 126)
+        {
+            NPC other = null;
+            foreach (NPC n in Main.npc)
+                if (n.active && n.type is 125 or 126 && (other == null || n.life < other.life))
+                    other = n;
+            if (other != null) boss = other;
+        }
         Vector2 pos = Player.Center;
         Vector2 vel = Player.velocity;
 
         // --- Threat scan: nearest hostile projectile predicted to pass close.
         Vector2 dodge = Vector2.Zero;
         float worst = float.MaxValue;
+        threatT = float.MaxValue;
         foreach (Projectile pr in Main.projectile)
         {
             if (!pr.active || !pr.hostile || pr.damage <= 0) continue;
@@ -74,12 +86,17 @@ public sealed class AutoPilot : ModPlayer
             TryThreat(boss.Center, boss.velocity, Math.Max(boss.width, boss.height) * 0.5f + 4f * 16,
                 ref dodge, ref worst, pos);
 
-        // Hostile minions (Queen Bee's bees, etc.) — NPCs, not projectiles.
+        // Hostile minions and boss attachments (Queen Bee's bees, Skeletron
+        // Prime's arms, Golem's fists — all boss=false with real HP pools) —
+        // NPCs, not projectiles.
         foreach (NPC n in Main.npc)
         {
-            if (!n.active || n.friendly || n.boss || n.damage <= 0 || n.lifeMax > 500) continue;
-            TryThreat(n.Center, n.velocity, Math.Max(n.width, n.height) * 0.5f + 16,
-                ref dodge, ref worst, pos);
+            if (!n.active || n.friendly || n.boss || n.damage <= 0) continue;
+            // Fast movers (worm segments arc at ~20px/tick) get a speed-
+            // scaled radius: detection at first crossing of the travel
+            // corridor, not 4 ticks before impact.
+            float r = Math.Max(n.width, n.height) * 0.5f + 16 + n.velocity.Length() * 8f;
+            TryThreat(n.Center, n.velocity, r, ref dodge, ref worst, pos);
         }
 
         // --- Range keeping vs boss.
@@ -118,11 +135,32 @@ public sealed class AutoPilot : ModPlayer
             }
             else
             {
-                if (dist > PreferredRange + RangeSlack) { moveX += dir.X; moveY += dir.Y * 0.4f; }
-                else if (dist < PreferredRange - RangeSlack) { moveX -= dir.X; moveY -= dir.Y * 0.4f; }
+                // Twins: dash speed ~17px/tick means the 18-tile default band
+                // is crossed in ~19 ticks — too few to climb clear. At 28
+                // tiles the burst window is comfortable.
+                float pref = boss.type is 125 or 126 ? 28f * 16 : PreferredRange;
+                if (dist > pref + RangeSlack) { moveX += dir.X; moveY += dir.Y * 0.4f; }
+                else if (dist < pref - RangeSlack) { moveX -= dir.X; moveY -= dir.Y * 0.4f; }
 
                 // Attack: aim at the predicted intercept point and hold use.
-                Vector2 aim = boss.Center + boss.velocity * (dist / 14f);
+                // Trash clear: when 4+ killable attackers swarm (destroyer
+                // probes, queen-slime minis, bees), the chip damage out-races
+                // the boss fight — thin them first. High-HP attachments
+                // (prime arms) are excluded: not efficiently killable.
+                Vector2 aimAt = boss.Center, aimVel = boss.velocity;
+                int trashCount = 0;
+                NPC trash = null;
+                float trashDist = float.MaxValue;
+                foreach (NPC n in Main.npc)
+                {
+                    if (!n.active || n.friendly || n.boss || n.damage <= 0 || n.lifeMax > 1000) continue;
+                    float d = Vector2.Distance(n.Center, pos);
+                    if (d > 40f * 16) continue;
+                    trashCount++;
+                    if (d < trashDist) { trashDist = d; trash = n; }
+                }
+                if (trashCount >= 4 && trash != null) { aimAt = trash.Center; aimVel = trash.velocity; }
+                Vector2 aim = aimAt + aimVel * (Vector2.Distance(pos, aimAt) / 14f);
                 Main.mouseX = (int)(aim.X - Main.screenPosition.X);
                 Main.mouseY = (int)(aim.Y - Main.screenPosition.Y);
                 PressUse();
@@ -142,6 +180,36 @@ public sealed class AutoPilot : ModPlayer
             }
         }
 
+        // Barrage strafe: when projectile threats arrive in a sustained
+        // stream (phase-2 Retinazer laser spam, future EoL/cultist walls),
+        // settling back into the range band between shots means every aimed
+        // shot connects. Keep sprinting sideways for the whole barrage
+        // instead — aimed shots trail behind a moving target.
+        if (threatT < 60f) threatStreak++; else threatStreak = 0;
+        if (threatStreak > 45 && boss != null && !isWoF)
+        {
+            float strafe = lastPerp.X;
+            if (Math.Abs(strafe) < 0.3f)
+                strafe = pos.X < boss.Center.X ? -1f : 1f; // vertical shots: run away from the boss side
+            // Never strafe into the boss's face.
+            if (Math.Sign(strafe) == Math.Sign(boss.Center.X - pos.X) && Math.Abs(boss.Center.X - pos.X) < 14f * 16)
+                strafe = -strafe;
+            moveX = strafe * 1.6f;
+            moveY = 0f;
+        }
+
+        // Evasion burst: an imminent charge connects in <45 ticks. Escape
+        // vertically — charges travel a line, and a held jump (wings climb)
+        // clears the hitbox far faster than any horizontal sidestep.
+        // WoF excluded: climbing risks the tongue zone.
+        if (evadeTicks > 0) evadeTicks--;
+        else if (!isWoF && dodge != Vector2.Zero && threatT < 45f && worst < 8f * 16)
+        {
+            evadeDir = dodge.Y > 0.3f ? 1 : -1;
+            if (evadeDir < 0 && RockAbove(8)) evadeDir = 1; // ceiling overhead: dive instead
+            evadeTicks = 22;
+        }
+
         // Quick-heal under half health.
         if (Player.statLife < Player.statLifeMax2 / 2 && Player.potionDelay <= 0)
             Player.QuickHeal();
@@ -153,6 +221,20 @@ public sealed class AutoPilot : ModPlayer
         bool wantUp = moveY < -0.5f;
         bool wantDown = moveY > 0.6f;
         Player.controlDown = wantDown;
+
+        if (evadeTicks > 0)
+        {
+            if (evadeDir < 0)
+            {
+                Player.controlJump = true; // held: jump, then wings keep climbing
+                jumpCooldown = 30;
+            }
+            else
+            {
+                Player.controlDown = true;
+                Player.controlJump = true; // platform drop-through
+            }
+        }
 
         bool blocked = (Player.controlLeft && vel.X > -1f) || (Player.controlRight && vel.X < 1f);
         stuckTicks = blocked && (Player.controlLeft || Player.controlRight) ? stuckTicks + 1 : 0;
@@ -389,6 +471,19 @@ public sealed class AutoPilot : ModPlayer
         Player.controlUseItem = Player.itemAnimation > 0 || Main.GameUpdateCount % 2 == 0;
     }
 
+    // Damage-source probes: who is actually landing hits.
+    public override void OnHitByNPC(NPC npc, Player.HurtInfo hurtInfo)
+    {
+        if (TrialRunner.Instance.Current == TrialRunner.Phase.Fighting)
+            Mod.Logger.Info($"[BossPilot] hit by npc {npc.type} dmg={hurtInfo.Damage} hp={Player.statLife}");
+    }
+
+    public override void OnHitByProjectile(Projectile proj, Player.HurtInfo hurtInfo)
+    {
+        if (TrialRunner.Instance.Current == TrialRunner.Phase.Fighting)
+            Mod.Logger.Info($"[BossPilot] hit by proj {proj.type} dmg={hurtInfo.Damage} hp={Player.statLife}");
+    }
+
     private NPC NearestOfType(int type, Vector2 pos)
     {
         NPC best = null;
@@ -401,6 +496,23 @@ public sealed class AutoPilot : ModPlayer
         }
         return best;
     }
+
+    /// <summary>Ticks until the chosen worst threat reaches its closest pass.</summary>
+    private float threatT = float.MaxValue;
+    /// <summary>
+    /// Dodge-direction memory. For a charge aimed straight AT the player,
+    /// pos-closest ≈ 0 and the perpendicular sign flips randomly each tick —
+    /// the pilot jitters in place and every re-aimed dash connects. The meta
+    /// is to keep one perpendicular direction so dashes trail behind.
+    /// </summary>
+    private Vector2 lastPerp = new(0, -1);
+    /// <summary>Consecutive ticks with a projectile threat under 60 ticks out.</summary>
+    private int threatStreak;
+    // Evasion burst state: a sustained wing climb / platform drop to clear a
+    // homing charge (twins, prime head spin). Pulses can't clear a 100px+
+    // boss hitbox mid-dash; a 20-tick held burst can.
+    private int evadeTicks;
+    private int evadeDir; // -1 = climb, +1 = drop
 
     /// <summary>
     /// If the threat's trajectory passes within (radius + ThreatRadius) of the
@@ -419,9 +531,15 @@ public sealed class AutoPilot : ModPlayer
         if (miss < need && miss < worst)
         {
             worst = miss;
+            threatT = tHit;
             Vector2 perp = new(-vel.Y, vel.X);
             perp.Normalize();
-            if (Vector2.Dot(perp, pos - closest) < 0) perp = -perp;
+            Vector2 offset = pos - closest;
+            if (offset.Length() < 2f * 16)
+                perp = lastPerp; // degenerate: aimed right at us — keep the side we already picked
+            else if (Vector2.Dot(perp, offset) < 0)
+                perp = -perp;
+            lastPerp = perp;
             dodge = perp;
         }
     }

@@ -305,6 +305,12 @@ public sealed class TrialRunner : ModSystem
         int id = NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
             (int)at.X, (int)at.Y, entry.NpcId);
         bossIndex = id;
+        if (entry.NpcId == 125)
+            // The twins do NOT pair up from AI — the Mechanical Eye summons
+            // Retinazer and Spazmatism as two separate spawns (Player.cs
+            // 544-case), so replicate that here.
+            NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
+                (int)at.X + 400, (int)at.Y - 200, 126);
         fightStartTick = (int)Main.GameUpdateCount;
         StateExport.Instance.Begin(Scenario.Name);
         Current = Phase.Fighting;
@@ -331,7 +337,9 @@ public sealed class TrialRunner : ModSystem
     private void TickFight()
     {
         Player p = Main.LocalPlayer;
-        bool bossGone = bossIndex < 0 || !Main.npc[bossIndex].active;
+        // Victory = every tracked part dead (twins both, EoW every segment).
+        BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
+        bool bossGone = !AnyTrackedActive(entry);
         double elapsed = (Main.GameUpdateCount - fightStartTick) / 60.0;
 
         if ((int)Main.GameUpdateCount % 600 == 0)
@@ -374,6 +382,19 @@ public sealed class TrialRunner : ModSystem
         if (bossGone) Finish("victory");
         else if (p.dead) Finish("death");
         else if (elapsed >= Scenario.MaxDurationSeconds) Finish("timeout");
+    }
+
+    /// <summary>Any active NPC of the boss's main type or tracked extra parts.</summary>
+    private static bool AnyTrackedActive(BossCatalog.BossEntry entry)
+    {
+        foreach (NPC n in Main.npc)
+        {
+            if (!n.active) continue;
+            if (n.type == entry.NpcId) return true;
+            foreach (int extra in entry.ExtraPartIds)
+                if (n.type == extra) return true;
+        }
+        return false;
     }
 
     private void Finish(string result)

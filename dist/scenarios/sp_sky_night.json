@@ -4,7 +4,7 @@
   "time": "night",
   "weather": "clear",
   "loadout": "stage_default",
-  "buffs": "none",
+  "buffs": "standard",
   "rescue_budget_ms": 16,
   "boss": "skeletron_prime",
   "max_duration_seconds": 480,

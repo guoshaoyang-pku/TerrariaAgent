@@ -15,10 +15,32 @@ public static class LoadoutGiver
         ClearHotbar(p);
 
         bool hardmode = boss.Hardmode;
-        if (hardmode)
+        if (boss.NpcId == 134)
+        {
+            // Destroyer: the shared-pool worm is THE Daedalus target — holy
+            // arrows rain onto a 50-segment body and pierce twice each. The
+            // pilot's point-at-boss aim drops the star rain on the head; the
+            // body mass behind it soaks the volley.
+            Give(p, ItemID.DaedalusStormbow, 1);
+            Give(p, ItemID.HolyArrow, 999);
+            Give(p, ItemID.HolyArrow, 999);
+            Give(p, ItemID.HolyArrow, 999);
+            Equip(p, 0, ItemID.TitaniumMask);
+            Equip(p, 1, ItemID.TitaniumBreastplate);
+            Equip(p, 2, ItemID.TitaniumLeggings);
+        }
+        else if (hardmode)
         {
             Give(p, tier == "stage_plus" ? ItemID.SDMG : ItemID.Megashark, 1);
-            Give(p, ItemID.MusketBall, 999);
+            // Megashark burns ~7 rounds/s; a 999 stack dries up ~140s in and
+            // long fights (destroyer 80k) silently go idle.
+            Give(p, ItemID.CrystalBullet, 999);
+            Give(p, ItemID.CrystalBullet, 999);
+            Give(p, ItemID.CrystalBullet, 999);
+            // Ranged titanium: real defense plus the Shadow Dodge bonus.
+            Equip(p, 0, ItemID.TitaniumMask);
+            Equip(p, 1, ItemID.TitaniumBreastplate);
+            Equip(p, 2, ItemID.TitaniumLeggings);
         }
         else if (boss.NpcId == 113)
         {
@@ -69,6 +91,17 @@ public static class LoadoutGiver
         {
             p.armor[5] = new Item();
             p.armor[5].SetDefaults(ItemID.LeafWings);
+            // Cross Necklace doubles post-hit i-frames — the single biggest
+            // lever in hardmode attrition fights. Avenger Emblem: +12% dps
+            // shortens fights the pilot survives on a margin.
+            p.armor[6] = new Item();
+            p.armor[6].SetDefaults(ItemID.CrossNecklace);
+            p.armor[7] = new Item();
+            p.armor[7].SetDefaults(ItemID.AvengerEmblem);
+            // Warding on every accessory (+4 def each): hardmode contact
+            // hits cluster in the 20-40 band, where flat defense scales hard.
+            for (int i = 3; i <= 7; i++)
+                p.armor[i].prefix = Terraria.ID.PrefixID.Warding;
         }
         else
         {

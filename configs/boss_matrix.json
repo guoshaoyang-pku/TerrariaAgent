@@ -166,12 +166,14 @@
         {
           "name": "qs_hallow_day",
           "biome": "hallow",
-          "time": "day"
+          "time": "day",
+          "buffs": "standard"
         },
         {
           "name": "qs_hallow_night_rain",
           "biome": "hallow",
-          "weather": "rain"
+          "weather": "rain",
+          "buffs": "standard"
         }
       ]
     },
@@ -180,15 +182,18 @@
       "scenarios": [
         {
           "name": "tw_sky_night",
-          "arena": "open_sky"
+          "arena": "open_sky",
+          "buffs": "standard"
         },
         {
-          "name": "tw_flat_night"
+          "name": "tw_flat_night",
+          "buffs": "standard"
         },
         {
           "name": "tw_space_night",
           "arena": "open_sky",
-          "biome": "space"
+          "biome": "space",
+          "buffs": "standard"
         }
       ]
     },
@@ -196,16 +201,19 @@
       "max_duration_seconds": 480,
       "scenarios": [
         {
-          "name": "dst_flat_night"
+          "name": "dst_flat_night",
+          "buffs": "standard"
         },
         {
           "name": "dst_enclosed_night",
-          "arena": "enclosed"
+          "arena": "enclosed",
+          "buffs": "standard"
         },
         {
           "name": "dst_sky_night",
           "arena": "open_sky",
-          "biome": "space"
+          "biome": "space",
+          "buffs": "standard"
         }
       ]
     },
@@ -213,16 +221,19 @@
       "max_duration_seconds": 480,
       "scenarios": [
         {
-          "name": "sp_flat_night"
+          "name": "sp_flat_night",
+          "buffs": "standard"
         },
         {
           "name": "sp_sky_night",
-          "arena": "open_sky"
+          "arena": "open_sky",
+          "buffs": "standard"
         },
         {
           "name": "sp_desert_sandstorm",
           "biome": "desert",
-          "weather": "sandstorm"
+          "weather": "sandstorm",
+          "buffs": "standard"
         }
       ]
     },
