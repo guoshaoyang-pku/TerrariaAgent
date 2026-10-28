@@ -21,6 +21,9 @@ public sealed class Threats
     public readonly float[] Margin = new float[Max], Grow = new float[Max];
     public readonly float[] MinX = new float[Max], MaxX = new float[Max], MinY = new float[Max], MaxY = new float[Max];
     public readonly int[] Life = new int[Max];
+    /// <summary>What a threat is, for diagnostics: NPC type, or -projectile type; shots 1000 + NPC type.</summary>
+    public readonly int[] Tag = new int[Max];
+    public int NextTag;
     public int Count;
 
     // Last displacement per NPC slot, for a one-tick acceleration estimate.
@@ -37,8 +40,8 @@ public sealed class Threats
     /// </summary>
     public struct Shot
     {
-        public int Tf, Life, ConstTicks;
-        public Vector2 Src;
+        public int Tf, Life, ConstTicks, Tag;
+        public Vector2 Src, Drift;
         public float Speed, Offset, Noise, Decay, HW, HH, Weight;
     }
 
@@ -47,16 +50,18 @@ public sealed class Threats
 
     public void Clear() { Count = 0; ShotCount = 0; }
 
-    public void AddShot(int tf, Vector2 src, float speed, float offset, float noise, float size, int life = H, float weight = 1f)
-        => AddDash(tf, src, speed, offset, noise, size, size, life, H, 1f, weight);
+    public void AddShot(int tf, Vector2 src, float speed, float offset, float noise, float size, int life = H, float weight = 1f, Vector2 drift = default)
+        => AddDash(tf, src, speed, offset, noise, size, size, life, H, 1f, weight, drift);
 
-    public void AddDash(int tf, Vector2 src, float speed, float offset, float noise, float w, float h, int life, int constTicks, float decay, float weight = 1f)
+    public void AddDash(int tf, Vector2 src, float speed, float offset, float noise, float w, float h, int life, int constTicks, float decay,
+        float weight = 1f, Vector2 drift = default)
     {
         if (ShotCount >= Shots.Length || tf < 1 || tf > H) return;
         Shots[ShotCount++] = new Shot
         {
             Tf = tf, Life = life, Src = src, Speed = speed, Offset = offset, Noise = noise,
             HW = w * 0.5f, HH = h * 0.5f, Weight = weight, ConstTicks = constTicks, Decay = decay,
+            Drift = drift, Tag = NextTag,
         };
     }
 
@@ -79,7 +84,7 @@ public sealed class Threats
         for (int t = sh.Tf + 1; t <= end; t++)
         {
             Vector2 prev = cur;
-            cur += dir * speed;
+            cur += dir * speed + sh.Drift;
             dist += speed;
             if (t - sh.Tf >= sh.ConstTicks) speed *= sh.Decay;
             float rx = prev.X - tr[t - 1].X, ry = prev.Y - tr[t - 1].Y;
@@ -98,7 +103,7 @@ public sealed class Threats
     {
         if (Count >= Max) return -1;
         int k = Count++;
-        HW[k] = hw; HH[k] = hh; Weight[k] = weight; Margin[k] = margin; Grow[k] = grow;
+        HW[k] = hw; HH[k] = hh; Weight[k] = weight; Margin[k] = margin; Grow[k] = grow; Tag[k] = NextTag;
         return k;
     }
 
@@ -153,6 +158,7 @@ public sealed class Threats
     public void AddNpc(NPC n, float weight = 1f, float margin = 4f, float grow = 0.6f, float accCap = 0.4f)
     {
         Vector2 v = Displacement(n), a = Accel(n, accCap);
+        NextTag = n.type;
         int k = Open(n.width * 0.5f, n.height * 0.5f, weight, margin, grow);
         if (k < 0) return;
         int b = k * S;
@@ -179,6 +185,7 @@ public sealed class Threats
             case ProjectileID.EyeFire: hw += 30; hh += 30; life = Math.Min(life, 60 / eu); break; // eye fire hitbox is inflated by 30
             case ProjectileID.BombSkeletronPrime: hw = hh = 64; a = new Vector2(0, 0.2f); vmax = 10f; break;     // Prime bomb: 128x128 blast on landing
         }
+        NextTag = -pr.type;
         AddBallistic(pr.Center, v, a, vmax, hw, hh, 1f, 2f, 0.15f, life);
     }
 

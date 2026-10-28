@@ -10,8 +10,10 @@ namespace BossPilot.Bosses.Mechs;
 /// stage: post-Wall of Flesh, first mechanical boss).
 ///
 /// stage_default is the classic ranged speedrun kit for the first mech: Daedalus
-/// Stormbow (Hallowed Mimic) with Holy Arrows - arrows rain from above the cursor,
-/// pierce Destroyer segments and need no line of sight - Adamantite ranged armor
+/// Stormbow (Hallowed Mimic) - arrows rain from above the cursor and need no line of
+/// sight - with the world evil's arrows (Ichor: -15 defense, or Cursed: Cursed Inferno;
+/// both beat Holy Arrows on 24-48 defense mech parts) and Holy Arrows as spares; the
+/// Destroyer plan puts piercing Jester's Arrows first. Adamantite ranged armor
 /// from the first altars, Fairy Wings (130 flight ticks, 6.75 px/tick), Frostspark
 /// Boots (6.75 run, rocket time adds flight), Lucky Horseshoe (no fall-damage hits),
 /// Magic Quiver + Ranger Emblem, 400 HP (15 crystals; life fruit needs a mech kill),
@@ -43,7 +45,8 @@ public static class MechKit
                 break;
             case "stage_plus":
                 Put(p, 0, ItemID.DaedalusStormbow);
-                Put(p, 54, ItemID.HolyArrow, 999);
+                Put(p, 54, WorldGen.crimson ? ItemID.IchorArrow : ItemID.CursedArrow, 999);
+                Put(p, 55, ItemID.HolyArrow, 999);
                 Armor(p, ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves);
                 Accessories(p, ItemID.LeafWings, ItemID.FrostsparkBoots, ItemID.LuckyHorseshoe, ItemID.MagicQuiver, ItemID.AvengerEmblem);
                 Put(p, 10, ItemID.GreaterHealingPotion, 15);
@@ -52,7 +55,8 @@ public static class MechKit
                 break;
             default: // stage_default
                 Put(p, 0, ItemID.DaedalusStormbow);
-                Put(p, 54, ItemID.HolyArrow, 999);
+                Put(p, 54, WorldGen.crimson ? ItemID.IchorArrow : ItemID.CursedArrow, 999);
+                Put(p, 55, ItemID.HolyArrow, 999);
                 Armor(p, ItemID.AdamantiteMask, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings);
                 Accessories(p, ItemID.FairyWings, ItemID.FrostsparkBoots, ItemID.LuckyHorseshoe, ItemID.MagicQuiver, ItemID.RangerEmblem);
                 Put(p, 10, ItemID.GreaterHealingPotion, 15);
@@ -92,6 +96,21 @@ public static class MechKit
     public static void MaybeHeal(Player p, float fraction = 0.55f)
     {
         p.controlQuickHeal = p.statLife < p.statLifeMax2 * fraction && p.potionDelay <= 0;
+    }
+
+    /// <summary>
+    /// Lit Peace Candles standing on the given floor row (spawn rate x1.3 slower, max spawns
+    /// x0.7, on top of Calming): arena furniture against wyverns and harpies at sky height.
+    /// </summary>
+    public static void PeaceCandles(int centerX, int floorRow)
+    {
+        foreach (int dx in new[] { -30, 0, 30 })
+        {
+            int x = centerX + dx + 2, y = floorRow - 1;
+            if (!WorldGen.InWorld(x, y, 2)) continue;
+            WorldGen.KillTile(x, y, fail: false, effectOnly: false, noItem: true);
+            WorldGen.PlaceTile(x, y, TileID.PeaceCandle, mute: true, forced: true);
+        }
     }
 
     /// <summary>World X range of the built arena, in pixels.</summary>

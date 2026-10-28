@@ -20,6 +20,9 @@ public abstract class MechPlan : BossPlan
     public override void GrantLoadout(Player p, ScenarioConfig s)
     {
         MechKit.Grant(p, s);
+        // Ammo experiment switch: MECHS_AMMO=holy puts Holy Arrows first.
+        if (Environment.GetEnvironmentVariable("MECHS_AMMO") == "holy" && s.Loadout != "min_preboss")
+            MechKit.Put(p, 54, ItemID.HolyArrow, 999);
         planner.Reset();
         patrolDir = 1;
     }
@@ -40,9 +43,11 @@ public abstract class MechPlan : BossPlan
     /// </summary>
     public override void DecorateArena(Point site, ScenarioConfig s)
     {
+        // Above this arena's own structure only (the enclosed box's ceiling is at 50 rows).
+        int top = s.Arena switch { "enclosed" => 51, "open_sky" => 81, _ => 41 };
         if (s.Biome != "space")
             for (int x = site.X - 85; x <= site.X + 85; x++)
-            for (int y = site.Y - 95; y < site.Y - 40; y++)
+            for (int y = site.Y - 95; y < site.Y - top; y++)
                 if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].HasTile)
                     WorldGen.KillTile(x, y, fail: false, effectOnly: false, noItem: true);
         if (s.Biome == "forest")
@@ -57,6 +62,16 @@ public abstract class MechPlan : BossPlan
             }
         if (s.Weather != "sandstorm" && Terraria.GameContent.Events.Sandstorm.Happening)
             Terraria.GameContent.Events.Sandstorm.StopSandstorm();
+        MechKit.PeaceCandles(site.X, site.Y);
+    }
+
+    /// <summary>
+    /// A headless server only rescans SceneMetrics (biome tile counts, candles) when asked;
+    /// the desert sandstorm and the Peace Candles depend on it.
+    /// </summary>
+    protected static void RefreshBiomes(Player p, FightContext ctx)
+    {
+        if (ctx.Tick % 30 == 1) p.ForceUpdateBiomes();
     }
 
     /// <summary>Adds hostile NPCs (except those the predicate claims) and projectiles near the pilot.</summary>
@@ -89,22 +104,41 @@ public abstract class MechPlan : BossPlan
     {
         (float left, float right) = MechKit.ArenaSpan(ctx);
         float cost = 0f;
-        if (s.X < left + inset) cost += (left + inset - s.X) / 8f;
-        if (s.X > right - inset) cost += (s.X - right + inset) / 8f;
+        if (s.X < left + inset) cost += (left + inset - s.X) / 3f;
+        if (s.X > right - inset) cost += (s.X - right + inset) / 3f;
         float alt = (MechKit.FloorY(ctx) - s.Y) / 16f;
-        if (alt < lo) cost += (lo - alt) * 0.8f;
-        if (alt > hi) cost += (alt - hi) * 0.8f;
+        if (alt < lo) cost += (lo - alt) * 2f;
+        if (alt > hi) cost += (alt - hi) * 2f;
         if (!s.Ground && s.Wing < 30f) cost += (30f - s.Wing) * 0.04f * Math.Max(0f, alt - 3f);
+        // The world's top edge (~41 tiles) pins the pilot: no room to dodge upward there.
+        if (s.Y < 60 * 16f) cost += (60 * 16f - s.Y) / 4f;
         return cost;
     }
 
-    /// <summary>Holds use and leads the Daedalus volley onto the target.</summary>
-    protected static void Shoot(Player p, NPC target)
+    private readonly Vector2[] aimDisp = new Vector2[Main.maxNPCs];
+    private readonly uint[] aimSeen = new uint[Main.maxNPCs];
+
+    /// <summary>Holds use and leads the Daedalus volley onto the target (velocity + one-tick acceleration).</summary>
+    protected void Shoot(Player p, NPC target)
     {
         if (target == null) { p.controlUseItem = false; return; }
         Vector2 v = target.position - target.oldPosition;
-        FightContext.Aim(Aiming.DaedalusLead(p, target.Center, v, speed: Aiming.ArrowSpeed(p)));
+        int i = target.whoAmI;
+        Vector2 a = aimSeen[i] + 1 == Main.GameUpdateCount ? v - aimDisp[i] : Vector2.Zero;
+        aimDisp[i] = v; aimSeen[i] = Main.GameUpdateCount;
+        if (a.LengthSquared() > 0.25f) a = Vector2.Normalize(a) * 0.5f;
+        FightContext.Aim(Aiming.DaedalusLead(p, target.Center, v, a, Aiming.ArrowSpeed(p)));
         p.controlUseItem = true;
+    }
+
+    /// <summary>A wyvern or harpy closing in on the pilot, shot before it reaches the arena.</summary>
+    protected static NPC Intruder(Player p)
+    {
+        foreach (NPC n in Main.npc)
+            if (n.active && (n.type == NPCID.WyvernHead || n.type == NPCID.Harpy) && n.Center.Y > p.Center.Y - 560f
+                && Vector2.DistanceSquared(n.Center, p.Center) < 640f * 640f)
+                return n;
+        return null;
     }
 
     protected static NPC Find(int type)
@@ -119,4 +153,6 @@ public abstract class MechPlan : BossPlan
     public float LastCost => planner.BestCost;
     public int LastFirstHit => planner.BestFirstHit;
     public string HitHistory => planner.HitHistory();
+    public string FreeHistory => planner.FreeHistory();
+    public string TagHistory => planner.TagHistory();
 }

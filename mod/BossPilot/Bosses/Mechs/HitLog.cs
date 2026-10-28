@@ -34,6 +34,8 @@ public sealed class HitLog : ModPlayer
             cost = plan.LastCost,
             predicted = plan.LastFirstHit,
             history = plan.HitHistory,
+            free = plan.FreeHistory,
+            tags = plan.TagHistory,
             proj_left = pr?.timeLeft ?? -1,
             proj_d = pr != null ? (pr.Center - Player.Center).Length() : -1,
             proj_v = pr != null ? pr.velocity.Length() * (1 + pr.extraUpdates) : -1,

@@ -81,6 +81,7 @@ public sealed class WormPredictor
         {
             NPC n = Main.npc[backNpc[j]];
             if (Vector2.DistanceSquared(back[j], p.Center) > r2) continue;
+            th.NextTag = n.type;
             int k = th.Open(n.width * 0.5f, n.height * 0.5f, 1f, margin, grow + (j == 0 ? 0.35f : 0f));
             if (k < 0) break;
             int b = k * (H + 1);

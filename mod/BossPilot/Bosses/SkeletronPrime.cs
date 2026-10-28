@@ -10,7 +10,7 @@ namespace BossPilot.Bosses;
 /// <summary>
 /// Skeletron Prime (head 127; Cannon 128, Saw 129, Vice 130, Laser 131). Killing the
 /// head ends the fight: every arm checks its head each tick and dies with it (aiStyle
-/// 33-36). Loadout: MechKit, Holy Arrows, all damage on the head.
+/// 33-36). Loadout: MechKit (Ichor/Cursed Arrows), all damage on the head.
 ///
 /// Kernel facts (aiStyle 32, Classic): the head hovers 200-500 px above the pilot within
 /// ±100 px (accel 0.1, max 8) for 600 ticks, then spins toward the pilot at only
@@ -33,14 +33,19 @@ public sealed class SkeletronPrime : MechPlan
     public override bool Control(Player p, NPC boss, FightContext ctx)
     {
         this.ctx = ctx;
+        RefreshBiomes(p, ctx);
         planner.Threats.Clear();
         CollectThreats(p, accCap: 0.5f);
         float patrol = PatrolTarget(p, 240f);
         NPC head = Find(NPCID.SkeletronPrime), laser = Find(NPCID.PrimeLaser);
         if (laser != null) ShotSchedule.PrimeLaser(laser, planner.Threats);
+        NPC saw = Find(NPCID.PrimeSaw), vice = Find(NPCID.PrimeVice), cannon = Find(NPCID.PrimeCannon);
+        if (saw != null) ShotSchedule.PrimeSaw(saw, planner.Threats);
+        if (vice != null) ShotSchedule.PrimeVice(vice, planner.Threats);
+        if (cannon != null) ShotSchedule.PrimeCannon(cannon, planner.Threats);
         planner.Goal = (s, t) => Goal(s, t, patrol, head);
         planner.Drive(p);
-        Shoot(p, head != null && head.Center.Y > p.Center.Y - 560f ? head : null);
+        Shoot(p, Intruder(p) ?? (head != null && head.Center.Y > p.Center.Y - 560f ? head : null));
         Finish(p);
         return true;
     }
