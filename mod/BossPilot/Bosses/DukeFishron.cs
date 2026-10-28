@@ -76,8 +76,9 @@ public sealed class DukeFishron : PilotPlan
         int level = -1;
         for (int x = 20; x < 380; x++)
         {
+            // Platforms (a skybridge left by another scenario) count as air.
             int y = 60;
-            while (y < Main.worldSurface && !Main.tile[x, y].HasTile && Main.tile[x, y].LiquidAmount == 0) y++;
+            while (y < Main.worldSurface && !Arenas.Solid(x, y) && Main.tile[x, y].LiquidAmount == 0) y++;
             if (Main.tile[x, y].LiquidAmount > 0) { level = y; continue; }
             if (level > 0) return (level, x);
         }
@@ -90,7 +91,7 @@ public sealed class DukeFishron : PilotPlan
         if (s.Arena == "natural")
         {
             int x = beach + 45;
-            return new Point(x, ArenaSites.SurfaceAt(x));
+            return new Point(x, Arenas.Surface(x));
         }
         // A slab 10 tiles above the waves, centered over the open water.
         return new Point(Math.Max(110, beach - 110), level - 10);
@@ -112,8 +113,8 @@ public sealed class DukeFishron : PilotPlan
             // beyond it are left out).
             (_, int beach) = LeftShore();
             int left = site.X, right = site.X;
-            while (left > beach && Math.Abs(ArenaSites.SurfaceAt(left - 1) - site.Y) <= 4) left--;
-            while (right < 392 && Math.Abs(ArenaSites.SurfaceAt(right + 1) - site.Y) <= 4) right++;
+            while (left > beach && Math.Abs(Arenas.Surface(left - 1) - site.Y) <= 4) left--;
+            while (right < 392 && Math.Abs(Arenas.Surface(right + 1) - site.Y) <= 4) right++;
             Arena = ArenaInfo.FromTiles(left, right, site.Y - 70, site.Y);
             PilotLog.Line($"beach arena x {left}..{right} floor {site.Y}");
             groundL = Arena.Left; groundR = Arena.Right;

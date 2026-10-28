@@ -130,6 +130,18 @@ public static class Arenas
 
     public static bool Solid(int x, int y) => WorldGen.InWorld(x, y, 1) && Main.tile[x, y].HasTile && Main.tileSolid[Main.tile[x, y].TileType] && !Main.tileSolidTop[Main.tile[x, y].TileType];
 
+    /// <summary>
+    /// First solid, non-platform tile from the top of column x. ArenaSites.SurfaceAt stops on
+    /// platforms, so arenas built earlier in the same world (skybridges, platform rows) would
+    /// lift every later site onto them.
+    /// </summary>
+    public static int Surface(int x)
+    {
+        for (int y = 50; y < Main.worldSurface + 50; y++)
+            if (Solid(x, y)) return y;
+        return (int)Main.worldSurface;
+    }
+
     /// <summary>First solid tile row at or below y in column x.</summary>
     public static int GroundBelow(int x, int y, int maxDepth = 200)
     {
