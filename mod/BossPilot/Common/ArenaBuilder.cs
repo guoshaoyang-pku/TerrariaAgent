@@ -30,9 +30,11 @@ public static class ArenaBuilder
                 Box(origin, width: 100, height: 50);
                 break;
             case "bridge":
-                // Wall of Flesh style: one long horizontal runway.
-                Flatten(origin, width: 400, height: 30);
-                Platforms(origin, width: 400, rows: 1, gap: 6);
+                // Wall of Flesh style: one long horizontal runway. The wall
+                // does not stop and the fight can run for minutes at ~12
+                // tiles/s, so span nearly the whole world.
+                Flatten(origin, width: Main.maxTilesX - 300, height: 40);
+                Platforms(origin, width: Main.maxTilesX - 300, rows: 1, gap: 6);
                 break;
             case "natural":
             default:
@@ -69,6 +71,7 @@ public static class ArenaBuilder
         for (int y = origin.Y - height; y < origin.Y + 10; y++)
         {
             if (!WorldGen.InWorld(x, y, 2)) continue;
+            Main.tile[x, y].LiquidAmount = 0; // drain lava/water pockets
             if (y < origin.Y) WorldGen.KillTile(x, y, fail: false, effectOnly: false, noItem: true);
             else if (!Main.tile[x, y].HasTile) WorldGen.PlaceTile(x, y, TileID.Stone, mute: true, forced: true);
         }
