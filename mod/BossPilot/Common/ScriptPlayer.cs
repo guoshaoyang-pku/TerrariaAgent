@@ -55,7 +55,7 @@ public sealed class ScriptPlayer : ModPlayer
 
     public override void PreUpdate()
     {
-        if (!Loaded || !TrialRunner.Instance.Current.Equals(TrialRunner.Phase.Fighting)) return;
+        if (!Loaded || AutoPilot.Enabled || !TrialRunner.Instance.Current.Equals(TrialRunner.Phase.Fighting)) return;
 
         int tick = StateExport.Instance.TicksSinceOpen;
         while (cursor < frames.Count && frames[cursor].Tick <= tick)

@@ -20,6 +20,7 @@ public sealed class ScenarioConfig
     [JsonPropertyName("buffs")] public string Buffs { get; init; } = "none";
     [JsonPropertyName("max_duration_seconds")] public double MaxDurationSeconds { get; init; } = 300;
     [JsonPropertyName("rescue_budget_ms")] public int RescueBudgetMs { get; init; } = 16;
+    [JsonPropertyName("controller")] public string Controller { get; init; } = "auto";
     [JsonPropertyName("enabled")] public bool Enabled { get; init; } = true;
 
     public static readonly string[] Arenas = ["flat_platforms", "open_sky", "enclosed", "natural", "bridge"];

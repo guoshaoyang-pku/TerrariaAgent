@@ -45,6 +45,9 @@ public sealed class TrialRunner : ModSystem
     {
         BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
         Player p = Main.LocalPlayer;
+        AutoPilot.Enabled = Scenario.Controller == "auto";
+        if (Scenario.Controller == "script" && !ScriptPlayer.Loaded)
+            Main.NewText("[BossPilot] controller=script but no script loaded", Color.Yellow);
         Vector2 at = p.Center + new Vector2(0, -300);
         int id = NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
             (int)at.X, (int)at.Y, entry.NpcId);
