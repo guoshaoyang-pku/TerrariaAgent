@@ -4,7 +4,7 @@
   "time": "day",
   "weather": "wind",
   "loadout": "stage_default",
-  "buffs": "none",
+  "buffs": "standard",
   "rescue_budget_ms": 16,
   "boss": "duke_fishron",
   "max_duration_seconds": 420,

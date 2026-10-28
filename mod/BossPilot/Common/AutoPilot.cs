@@ -59,6 +59,14 @@ public sealed class AutoPilot : ModPlayer
                     other = n;
             if (other != null) boss = other;
         }
+        // Golem: the body (245) is invulnerable while the head (246) lives
+        // (dontTakeDamage = headActive in AI_045_Golem). Kill order matters:
+        // head first, body second.
+        if (boss != null && boss.type == 245)
+        {
+            NPC head = NearestOfType(246, Player.Center);
+            if (head != null) boss = head;
+        }
         Vector2 pos = Player.Center;
         Vector2 vel = Player.velocity;
 
@@ -82,9 +90,18 @@ public sealed class AutoPilot : ModPlayer
             lastDamageTick = Main.GameUpdateCount;
         }
         else if (boss != null) lastBossHp = boss.life;
-        if (boss != null && !isWoF)
-            TryThreat(boss.Center, boss.velocity, Math.Max(boss.width, boss.height) * 0.5f + 4f * 16,
-                ref dodge, ref worst, pos);
+        // Every boss body is a threat, not just the aim target (golem's body
+        // hops while we shoot the head; the unfocused twin still charges).
+        // Plantera excluded: it is ALWAYS within threat range, so a body
+        // dodge would permanently override the orbit that actually kites it.
+        // WoF excluded: handled by its sweep logic below.
+        if (!isWoF)
+            foreach (NPC n in Main.npc)
+            {
+                if (!n.active || !n.boss || n.type == 262) continue;
+                TryThreat(n.Center, n.velocity, Math.Max(n.width, n.height) * 0.5f + 4f * 16,
+                    ref dodge, ref worst, pos);
+            }
 
         // Hostile minions and boss attachments (Queen Bee's bees, Skeletron
         // Prime's arms, Golem's fists — all boss=false with real HP pools) —
@@ -131,6 +148,42 @@ public sealed class AutoPilot : ModPlayer
                 Vector2 aim = aimAt + aimVel * (Vector2.Distance(pos, aimAt) / 14f);
                 Main.mouseX = (int)(aim.X - Main.screenPosition.X);
                 Main.mouseY = (int)(aim.Y - Main.screenPosition.Y);
+                PressUse();
+            }
+            else if (boss.type is 245 or 246)
+            {
+                // Golem: hover ~12 tiles above the body. Fists punch
+                // horizontally and whiff above; eye beams fire level; only
+                // the body's hop reaches us, and that the threat scan sees.
+                NPC body = NearestOfType(245, pos) ?? boss;
+                Vector2 anchor = body.Center + new Vector2(0, -12f * 16);
+                Vector2 toAnchor = anchor - pos;
+                moveX = Math.Clamp(toAnchor.X / 32f, -1.2f, 1.2f);
+                moveY = Math.Clamp(toAnchor.Y / 32f, -1.2f, 1.2f);
+
+                Vector2 aimG = boss.Center + boss.velocity * (Vector2.Distance(pos, boss.Center) / 14f);
+                Main.mouseX = (int)(aimG.X - Main.screenPosition.X);
+                Main.mouseY = (int)(aimG.Y - Main.screenPosition.Y);
+                PressUse();
+            }
+            else if (boss.type == 262)
+            {
+                // Plantera pursues on hooks at roughly Hermes speed — a range
+                // band just gets walked down. Orbit it instead: tangential
+                // movement makes the direct-line pursuit trail behind, and
+                // thorn balls fired along the radial miss a tangential
+                // target. Slight outward radial when crowded.
+                Vector2 radial = pos - boss.Center;
+                if (radial.LengthSquared() < 1f) radial = new Vector2(1, 0);
+                radial.Normalize();
+                Vector2 tangent = new(-radial.Y, radial.X);
+                moveX = tangent.X * 1.4f;
+                moveY = tangent.Y * 1.4f;
+                if (dist < 14f * 16) { moveX += radial.X * 0.8f; moveY += radial.Y * 0.5f; }
+
+                Vector2 aim262 = boss.Center + boss.velocity * (dist / 14f);
+                Main.mouseX = (int)(aim262.X - Main.screenPosition.X);
+                Main.mouseY = (int)(aim262.Y - Main.screenPosition.Y);
                 PressUse();
             }
             else
@@ -203,7 +256,8 @@ public sealed class AutoPilot : ModPlayer
         // clears the hitbox far faster than any horizontal sidestep.
         // WoF excluded: climbing risks the tongue zone.
         if (evadeTicks > 0) evadeTicks--;
-        else if (!isWoF && dodge != Vector2.Zero && threatT < 45f && worst < 8f * 16)
+        else if (!isWoF && dodge != Vector2.Zero && threatT < 45f && worst < 8f * 16
+                 && Math.Abs(dodge.Y) > 0.45f) // vertical threat → escape is lateral; bursts only pay off on lateral charges
         {
             evadeDir = dodge.Y > 0.3f ? 1 : -1;
             if (evadeDir < 0 && RockAbove(8)) evadeDir = 1; // ceiling overhead: dive instead
@@ -384,6 +438,11 @@ public sealed class AutoPilot : ModPlayer
         // Main.UnderworldLayer while Horrified drags the player into the wall.
         bool emergencyJump = dodge != Vector2.Zero && wantUp;
         bool canJump = onGround || !isWoF || Player.position.Y > (Main.UnderworldLayer + 12) * 16f;
+        // Wing sustain: a held jump while airborne keeps wings climbing —
+        // hovering (golem overhead anchor) and sky-fight altitude control
+        // both need it. Ground pulses alone collapse back to the floor.
+        if (!onGround && wantUp && Player.wingTime > 0 && canJump)
+            Player.controlJump = true;
         if ((emergencyJump || (moveY < -0.5f && onGround) || stuckTicks > 15) && jumpCooldown == 0 && canJump)
         {
             Player.controlJump = true;

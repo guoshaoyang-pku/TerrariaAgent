@@ -244,13 +244,15 @@
           "name": "pl_jungle_enclosed",
           "arena": "enclosed",
           "biome": "underground_jungle",
-          "time": "day"
+          "time": "day",
+          "buffs": "standard"
         },
         {
           "name": "pl_jungle_natural",
           "arena": "natural",
           "biome": "underground_jungle",
-          "time": "day"
+          "time": "day",
+          "buffs": "standard"
         }
       ]
     },
@@ -261,13 +263,15 @@
           "name": "gl_temple_enclosed",
           "arena": "enclosed",
           "biome": "jungle",
-          "time": "day"
+          "time": "day",
+          "buffs": "standard"
         },
         {
           "name": "gl_temple_natural",
           "arena": "natural",
           "biome": "jungle",
-          "time": "day"
+          "time": "day",
+          "buffs": "standard"
         }
       ]
     },
@@ -279,18 +283,21 @@
           "arena": "open_sky",
           "biome": "ocean",
           "time": "day",
-          "weather": "rain"
+          "weather": "rain",
+          "buffs": "standard"
         },
         {
           "name": "df_ocean_night",
-          "biome": "ocean"
+          "biome": "ocean",
+          "buffs": "standard"
         },
         {
           "name": "df_ocean_wind",
           "arena": "natural",
           "biome": "ocean",
           "time": "day",
-          "weather": "wind"
+          "weather": "wind",
+          "buffs": "standard"
         }
       ]
     },
@@ -299,19 +306,22 @@
       "scenarios": [
         {
           "name": "eol_hallow_night",
-          "biome": "hallow"
+          "biome": "hallow",
+          "buffs": "standard"
         },
         {
           "name": "eol_daytime",
           "biome": "hallow",
           "time": "day",
           "loadout": "stage_plus",
-          "max_duration_seconds": 300
+          "max_duration_seconds": 300,
+          "buffs": "standard"
         },
         {
           "name": "eol_hallow_rain",
           "biome": "hallow",
-          "weather": "rain"
+          "weather": "rain",
+          "buffs": "standard"
         }
       ]
     },
@@ -321,12 +331,14 @@
         {
           "name": "lc_dungeon_day",
           "biome": "dungeon",
-          "time": "day"
+          "time": "day",
+          "buffs": "standard"
         },
         {
           "name": "lc_dungeon_night_rain",
           "biome": "dungeon",
-          "weather": "rain"
+          "weather": "rain",
+          "buffs": "standard"
         }
       ]
     },

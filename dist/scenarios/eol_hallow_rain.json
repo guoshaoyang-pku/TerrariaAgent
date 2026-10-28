@@ -4,7 +4,7 @@
   "time": "night",
   "weather": "rain",
   "loadout": "stage_default",
-  "buffs": "none",
+  "buffs": "standard",
   "rescue_budget_ms": 16,
   "boss": "empress_of_light",
   "max_duration_seconds": 420,

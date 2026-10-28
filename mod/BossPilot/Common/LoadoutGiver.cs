@@ -15,7 +15,17 @@ public static class LoadoutGiver
         ClearHotbar(p);
 
         bool hardmode = boss.Hardmode;
-        if (boss.NpcId == 134)
+        if (boss.NpcId == 245)
+        {
+            // Golem (post-plantera stage): 40k effective HP with constant
+            // fist/beam chip damage is an attrition fight. Vampire Knives
+            // turn dps into healing — the chip never accumulates.
+            Give(p, ItemID.VampireKnives, 1);
+            Equip(p, 0, ItemID.TitaniumHelmet);
+            Equip(p, 1, ItemID.TitaniumBreastplate);
+            Equip(p, 2, ItemID.TitaniumLeggings);
+        }
+        else if (boss.NpcId == 134)
         {
             // Destroyer: the shared-pool worm is THE Daedalus target — holy
             // arrows rain onto a 50-segment body and pierce twice each. The
@@ -92,12 +102,13 @@ public static class LoadoutGiver
             p.armor[5] = new Item();
             p.armor[5].SetDefaults(ItemID.LeafWings);
             // Cross Necklace doubles post-hit i-frames — the single biggest
-            // lever in hardmode attrition fights. Avenger Emblem: +12% dps
-            // shortens fights the pilot survives on a margin.
+            // lever in hardmode attrition fights. Worm Scarf (-17% intake)
+            // beats +12% dps when survival is the binding constraint (golem
+            // fists, prime arms): the fight-time margin is already wide.
             p.armor[6] = new Item();
             p.armor[6].SetDefaults(ItemID.CrossNecklace);
             p.armor[7] = new Item();
-            p.armor[7].SetDefaults(ItemID.AvengerEmblem);
+            p.armor[7].SetDefaults(ItemID.WormScarf);
             // Warding on every accessory (+4 def each): hardmode contact
             // hits cluster in the 20-40 band, where flat defense scales hard.
             for (int i = 3; i <= 7; i++)

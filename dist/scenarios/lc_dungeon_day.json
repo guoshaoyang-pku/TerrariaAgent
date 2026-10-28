@@ -4,7 +4,7 @@
   "time": "day",
   "weather": "clear",
   "loadout": "stage_default",
-  "buffs": "none",
+  "buffs": "standard",
   "rescue_budget_ms": 16,
   "boss": "lunatic_cultist",
   "max_duration_seconds": 420,

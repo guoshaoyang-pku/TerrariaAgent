@@ -85,6 +85,7 @@ public sealed class TrialRunner : ModSystem
         }
         ApplyWorldFlags(Scenario);
         ApplyBuffs(Scenario);
+        Mod.Logger.Info($"[BossPilot] zones: jungle={p.ZoneJungle} corrupt={p.ZoneCorrupt} crimson={p.ZoneCrimson} hallow={p.ZoneHallow} snow={p.ZoneSnow} beach={p.ZoneBeach} dungeon={p.ZoneDungeon}");
         BeginFight();
     }
 
@@ -276,14 +277,20 @@ public sealed class TrialRunner : ModSystem
         _ => null,
     };
 
-    /// <summary>Scans downward at spawn X for a mud+air pocket.</summary>
+    /// <summary>
+    /// Scans columns near spawn for real jungle (JungleGrass blocks), then
+    /// returns a spot above the canopy. A bare mud pocket is NOT jungle —
+    /// plantera enrages there.
+    /// </summary>
     private static Vector2? FindUndergroundJungle()
     {
-        for (int y = (int)(Main.maxTilesY * 0.45); y < Main.maxTilesY - 260; y += 8)
+        for (int dx = 0; dx < 400; dx += 16)
+        for (int y = (int)(Main.maxTilesY * 0.4); y < Main.maxTilesY - 260; y += 4)
         {
-            Tile t = Framing.GetTileSafely(Main.spawnTileX, y);
-            if (t.HasTile && t.TileType == Terraria.ID.TileID.Mud)
-                return new Vector2(Main.spawnTileX * 16f, (y - 20) * 16f);
+            int x = Main.spawnTileX + (dx % 2 == 0 ? dx / 2 : -(dx + 16) / 2);
+            Tile t = Framing.GetTileSafely(x, y);
+            if (t.HasTile && t.TileType == Terraria.ID.TileID.JungleGrass)
+                return new Vector2(x * 16f, (y - 20) * 16f);
         }
         return new Vector2(Main.spawnTileX * 16f, Main.maxTilesY * 0.55f * 16f);
     }
@@ -463,5 +470,6 @@ public sealed class TrialRunner : ModSystem
         p.AddBuff(Terraria.ID.BuffID.Swiftness, duration);
         p.AddBuff(Terraria.ID.BuffID.Endurance, duration);
         p.AddBuff(Terraria.ID.BuffID.WellFed, duration);
+        p.AddBuff(Terraria.ID.BuffID.Lifeforce, duration);
     }
 }

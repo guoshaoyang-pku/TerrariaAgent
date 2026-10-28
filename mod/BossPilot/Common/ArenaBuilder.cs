@@ -44,8 +44,33 @@ public static class ArenaBuilder
                 Platforms(origin, width: Main.maxTilesX - 300, rows: 1, gap: 6);
                 break;
             case "natural":
+                // "Natural" keeps the terrain's character but the fight must
+                // still be physically possible: the underground jungle is a
+                // cave maze a kiting pilot cannot navigate. Hollow one
+                // chamber (same philosophy as the WoF runway prep).
+                if (biome == "underground_jungle")
+                {
+                    Hollow(origin, width: 64, height: 30);
+                    // The pocket alone can strip the local jungle tile count
+                    // below the ZoneJungle threshold — reline the floor.
+                    PaintBiomeFloor(new Point(origin.X, origin.Y + 13), biome, 64, depth: 4);
+                }
+                break;
             default:
                 break; // leave terrain untouched
+        }
+    }
+
+    /// <summary>Carves an open chamber with direct tile writes.</summary>
+    private static void Hollow(Point origin, int width, int height)
+    {
+        for (int x = origin.X - width / 2; x < origin.X + width / 2; x++)
+        for (int y = origin.Y - height; y < origin.Y + height / 2; y++)
+        {
+            if (!WorldGen.InWorld(x, y, 2)) continue;
+            Tile t = Main.tile[x, y];
+            t.LiquidAmount = 0;
+            if (t.HasTile) t.ClearTile();
         }
     }
 
@@ -53,7 +78,7 @@ public static class ArenaBuilder
     /// Replaces the arena floor strip with the biome's grass/block type so the
     /// game registers the requested biome at the fight location.
     /// </summary>
-    private static void PaintBiomeFloor(Point origin, string biome, int width)
+    private static void PaintBiomeFloor(Point origin, string biome, int width, int depth = 2)
     {
         int tile = biome switch
         {
@@ -68,8 +93,29 @@ public static class ArenaBuilder
         };
         if (tile < 0) return;
         for (int x = origin.X - width / 2; x < origin.X + width / 2; x++)
-            if (WorldGen.InWorld(x, origin.Y, 2))
+        {
+            if (!WorldGen.InWorld(x, origin.Y, 2)) continue;
+            if (tile == TileID.JungleGrass)
+            {
+                // Jungle grass only sticks on mud and WorldGen.PlaceTile has
+                // silent refusal modes — write the blocks directly, `depth`
+                // rows deep, so the jungle biome actually registers (tML
+                // needs 140 counted tiles). Plantera enrages (+8 speed, x2
+                // damage) when ZoneJungle is false — load-bearing.
+                for (int y = origin.Y; y < origin.Y + depth; y++)
+                {
+                    Tile t = Main.tile[x, y];
+                    t.ClearTile();
+                    t.HasTile = true;
+                    t.TileType = TileID.JungleGrass;
+                    t.Slope = SlopeType.Solid;
+                    t.IsHalfBlock = false;
+                    WorldGen.SquareTileFrame(x, y);
+                }
+            }
+            else
                 WorldGen.PlaceTile(x, origin.Y, tile, mute: true, forced: true);
+        }
     }
 
     private static void Flatten(Point origin, int width, int height)
