@@ -1,5 +1,6 @@
 using Terraria;
 using Terraria.ID;
+using Terraria.ModLoader;
 
 namespace BossPilot.Common;
 
@@ -123,14 +124,8 @@ public static class LoadoutGiver
         // Healing potions for the pilot's quick-heal.
         Give(p, hardmode ? ItemID.GreaterHealingPotion : ItemID.HealingPotion, 30);
 
-        // Health floor so v0 trials are not one-shot checks. tML recomputes
-        // statLifeMax from ConsumedLifeCrystals/Fruit every tick
-        // (PlayerLoader), so grant health through the consumption counters.
-        int targetLife = hardmode ? 500 : 400;
-        p.ConsumedLifeCrystals = 15;              // 100 + 15*20 = 400
-        p.ConsumedLifeFruit = hardmode ? 20 : 0;  // + 20*5 = 500 in hardmode
-        p.statLifeMax = targetLife;
-        p.statLife = targetLife;
+        // Health floor so v0 trials are not one-shot checks.
+        SetMaxStats(p, life: hardmode ? 500 : 400);
 
         p.selectedItem = 0;
     }
@@ -139,6 +134,21 @@ public static class LoadoutGiver
     {
         p.armor[slot] = new Item();
         p.armor[slot].SetDefaults(type);
+    }
+
+    /// <summary>
+    /// Grants max life/mana as consumed crystals and fruit. tModLoader recomputes
+    /// statLifeMax from these every tick (PlayerLoader.ResetMaxStatsToVanilla), so
+    /// writing statLifeMax directly is undone on the next update.
+    /// </summary>
+    public static void SetMaxStats(Player p, int life, int mana = 20)
+    {
+        p.ConsumedLifeCrystals = (life - 100) / 20;
+        p.ConsumedLifeFruit = (life - 400) / 5;
+        p.ConsumedManaCrystals = (mana - 20) / 20;
+        PlayerLoader.ResetMaxStatsToVanilla(p);
+        p.statLife = p.statLifeMax2 = p.statLifeMax;
+        p.statMana = p.statManaMax2 = p.statManaMax;
     }
 
     private static void Give(Player p, int type, int stack)

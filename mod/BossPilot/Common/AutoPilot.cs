@@ -40,14 +40,15 @@ public sealed class AutoPilot : ModPlayer
     /// </summary>
     public static int BridgeLineY = -1;
 
-    // SetControls runs after vanilla input processing, so our writes survive
-    // the frame. (PreUpdate writes get overwritten by PlayerInput.)
+    // SetControls, not PreUpdate: Player.Update resets controls from input between the two.
     public override void SetControls()
     {
-        if (!Enabled || TrialRunner.Instance.Current != TrialRunner.Phase.Fighting) return;
-        if (Player.dead) return;
+        TrialRunner trial = TrialRunner.Instance;
+        if (trial.Current != TrialRunner.Phase.Fighting || Player.dead || Player.whoAmI != Main.myPlayer) return;
 
         NPC boss = FindBoss();
+        if (trial.Plan != null && trial.Plan.Control(Player, boss, trial.Context)) return;
+        if (!Enabled) return;
         // Twins focus-fire: nearest-targeting alternates between the two and
         // leaves both alive forever; the meta is to burn one down. Retinazer
         // phase 2 is a laser barrage that only gets denser — kill it early.

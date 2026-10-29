@@ -1,16 +1,17 @@
-using System.Linq;
+using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Terraria;
-using Terraria.ID;
 using Terraria.ModLoader;
 
 namespace BossPilot.Common;
 
 /// <summary>
-/// Trial state machine: prepare the arena, spawn the scenario boss, run until
-/// the boss dies, the player dies, or the scenario time limit elapses.
-/// Driving it happens through the /bosspilot chat command; per-tick control
-/// comes from ScriptPlayer once a script is loaded.
+/// Trial state machine: build the arena at the plan's site, grant the
+/// loadout, spawn the boss, run until it is killed, the pilot dies, it
+/// despawns, or the scenario time limit elapses. Started by the chat command,
+/// AutorunSystem (GUI) or JobRunner (headless server); per-tick control comes
+/// from the boss plan, AutoPilot or ScriptPlayer.
 /// </summary>
 public sealed class TrialRunner : ModSystem
 {
@@ -18,41 +19,100 @@ public sealed class TrialRunner : ModSystem
 
     public static TrialRunner Instance => ModContent.GetInstance<TrialRunner>();
 
+    // Ticks between arena build and boss spawn, so biome scans and landing settle.
+    private const int SettleTicks = 45;
+
     public Phase Current { get; private set; } = Phase.Idle;
     public ScenarioConfig Scenario { get; private set; }
+    public BossPlan Plan { get; private set; }
+    public FightContext Context { get; private set; }
     public string Result { get; private set; }
 
-    private int fightStartTick;
-    private int bossIndex = -1;
+    // Per-attempt metrics; Hits/DamageTaken/Kills are fed by TrialMetrics hooks.
+    public int Hits { get; internal set; }
+    public int DamageTaken { get; internal set; }
+    public int Kills { get; private set; }
+    public float BossHpFraction { get; private set; } = 1f;
+    public int FightTicks => Context?.Tick ?? 0;
+
+    private HashSet<int> trackedTypes = [];
+    private int settleTicks;
+    private bool bossSeen, bossDefeated;
+    private int bossIndex = -1; // plan-less spawns only, for AutoPilot's WoF logging
 
     public string Start(ScenarioConfig scenario)
     {
-        if (Current != Phase.Idle && Current != Phase.Finished)
+        if (Current is Phase.Preparing or Phase.Fighting)
             return $"busy: phase {Current}";
         if (!BossCatalog.TryGet(scenario.Boss, out BossCatalog.BossEntry entry))
             return $"unknown boss: {scenario.Boss}";
 
         Scenario = scenario;
+        Plan = BossPlan.For(scenario.Boss);
         Result = null;
-        prepTicks = 0;
+        Hits = DamageTaken = Kills = 0;
+        BossHpFraction = 1f;
+        bossSeen = bossDefeated = false;
+        trackedTypes = [entry.NpcId, .. entry.ExtraPartIds];
+
+        // World stage follows the boss; one server runs many scenarios, so never inherit the last one's.
+        // Plans may still override it in ArenaSite/GrantLoadout.
+        Main.hardMode = entry.Hardmode;
+
+        prepTicks = settleTicks = 0;
+        prepared = false;
         Current = Phase.Preparing;
-        return $"prepared {scenario.Name} ({entry.Name})";
+        // The headless server's pilot is already in the world. A GUI autorun starts at world load,
+        // before the in-world player exists, and prepares from PostUpdateEverything instead.
+        if (Main.dedServ) Prepare();
+        return $"prepared {scenario.Name} ({entry.Name}{(Plan == null ? ", no plan" : "")})";
     }
 
     private int prepTicks;
+    private bool prepared;
 
+    /// <summary>
+    /// Builds the arena, puts the pilot on it, grants the loadout and applies the
+    /// scenario's world flags. A plan picks its own site and kit; without one,
+    /// AutoPilot's biome sites are used.
+    /// </summary>
     private void Prepare()
     {
-        // Runs on the first world tick after spawn: the local player is real,
-        // positioned, and alive. Loadout/arena applied here, not in OnWorldLoad
-        // (which fires before the player object is the in-world one).
         BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
         Player p = Main.LocalPlayer;
+        hellStripY = -1;
+        stripDumped = false;
+        AutoPilot.BridgeLineY = -1;
+        Point site;
+        if (Plan != null)
+        {
+            site = Plan.ArenaSite(Scenario);
+            ArenaBuilder.Build(Scenario.Arena, Scenario.Biome, site.ToWorldCoordinates());
+            Plan.DecorateArena(site, Scenario);
+            p.position = new Vector2(site.X * 16 - p.width / 2f, site.Y * 16 - p.height - 2);
+            p.velocity = Vector2.Zero;
+            p.fallStart = site.Y;
+            Plan.GrantLoadout(p, Scenario);
+        }
+        else
+            site = PrepareWithoutPlan(entry, p);
+        AutoPilot.Enabled = Scenario.Controller == "auto";
+        if (Scenario.Controller == "script" && !ScriptPlayer.Loaded)
+            Main.NewText("[BossPilot] controller=script but no script loaded", Color.Yellow);
+        ApplyWorldFlags(Scenario);
+        ApplyBuffs(Scenario);
+        Mod.Logger.Info($"[BossPilot] zones: jungle={p.ZoneJungle} corrupt={p.ZoneCorrupt} crimson={p.ZoneCrimson} hallow={p.ZoneHallow} snow={p.ZoneSnow} beach={p.ZoneBeach} dungeon={p.ZoneDungeon}");
+
+        Context = new FightContext { Scenario = Scenario, Site = site };
+        prepared = true;
+    }
+
+    /// <summary>AutoPilot's arena setup for a boss without a plan; returns the site tile.</summary>
+    private Point PrepareWithoutPlan(BossCatalog.BossEntry entry, Player p)
+    {
         Mod.Logger.Info($"[BossPilot] prepare: player#{p.GetHashCode()} active={p.active} hpMax(before)={p.statLifeMax}");
         LoadoutGiver.Grant(p, entry, Scenario.Loadout);
         Mod.Logger.Info($"[BossPilot] prepare: hpMax(after)={p.statLifeMax} weapon={p.inventory[0].type}");
-        hellStripY = -1;
-        stripDumped = false;
         Vector2 site = BiomeSite(Scenario.Biome) ?? p.Center;
         if (Scenario.Biome == "underworld" && Scenario.Arena != "bridge" && entry.NpcId == 113)
             // Natural hell: fight where nature is flattest. Scans runway
@@ -83,10 +143,7 @@ public sealed class TrialRunner : ModSystem
             p.fallStart = (int)(p.position.Y / 16f);
             Mod.Logger.Info($"[BossPilot] teleported for biome {Scenario.Biome} -> {stand / 16f}");
         }
-        ApplyWorldFlags(Scenario);
-        ApplyBuffs(Scenario);
-        Mod.Logger.Info($"[BossPilot] zones: jungle={p.ZoneJungle} corrupt={p.ZoneCorrupt} crimson={p.ZoneCrimson} hallow={p.ZoneHallow} snow={p.ZoneSnow} beach={p.ZoneBeach} dungeon={p.ZoneDungeon}");
-        BeginFight();
+        return (site / 16f).ToPoint();
     }
 
     private static int wofKiteDir = 1;
@@ -299,29 +356,34 @@ public sealed class TrialRunner : ModSystem
     {
         BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
         Player p = Main.LocalPlayer;
-        AutoPilot.Enabled = Scenario.Controller == "auto";
-        if (Scenario.Controller == "script" && !ScriptPlayer.Loaded)
-            Main.NewText("[BossPilot] controller=script but no script loaded", Color.Yellow);
-        Vector2 at = p.Center + new Vector2(0, -300);
-        if (entry.NpcId == 113)
-            // The Wall of Flesh spawns beside the player and sweeps across the
-            // world in the player's kite direction (chosen by runway scoring).
-            // 30 tiles: inside the tongue leash, with room to spin Hermes up
-            // to full speed before the mouth arrives.
-            at = p.Center + new Vector2(-wofKiteDir * 30 * 16f, 0);
-        int id = NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
-            (int)at.X, (int)at.Y, entry.NpcId);
-        bossIndex = id;
-        if (entry.NpcId == 125)
-            // The twins do NOT pair up from AI — the Mechanical Eye summons
-            // Retinazer and Spazmatism as two separate spawns (Player.cs
-            // 544-case), so replicate that here.
-            NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
-                (int)at.X + 400, (int)at.Y - 200, 126);
-        fightStartTick = (int)Main.GameUpdateCount;
+        bossIndex = -1;
+        if (Plan != null) Plan.SpawnBoss(p, Scenario);
+        else
+        {
+            Vector2 at = p.Center + new Vector2(0, -300);
+            if (entry.NpcId == 113)
+                // The Wall of Flesh spawns beside the player and sweeps across the
+                // world in the player's kite direction (chosen by runway scoring).
+                // 30 tiles: inside the tongue leash, with room to spin Hermes up
+                // to full speed before the mouth arrives.
+                at = p.Center + new Vector2(-wofKiteDir * 30 * 16f, 0);
+            int id = NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
+                (int)at.X, (int)at.Y, entry.NpcId);
+            bossIndex = id;
+            if (entry.NpcId == 125)
+                // The twins do NOT pair up from AI — the Mechanical Eye summons
+                // Retinazer and Spazmatism as two separate spawns (Player.cs
+                // 544-case), so replicate that here.
+                NPC.NewNPC(new Terraria.DataStructures.EntitySource_DebugCommand("BossPilot"),
+                    (int)at.X + 400, (int)at.Y - 200, 126);
+        }
+        // This runs after the tick's NPC pass counted spawn slots, so the next NPC.SpawnNPC would see
+        // none taken (e.g. a Dungeon Guardian roll beside Skeletron). Credit the boss's slots now.
+        foreach (NPC n in Main.npc)
+            if (n.active && trackedTypes.Contains(n.type)) p.nearbyActiveNPCs += n.npcSlots;
         StateExport.Instance.Begin(Scenario.Name);
         Current = Phase.Fighting;
-        Mod.Logger.Info($"[BossPilot] fight start: {Scenario.Name}, boss npc id {entry.NpcId} -> slot {id}");
+        Mod.Logger.Info($"[BossPilot] fight start: {Scenario.Name}, boss npc id {entry.NpcId}");
     }
 
     public override void PostUpdateEverything()
@@ -329,11 +391,15 @@ public sealed class TrialRunner : ModSystem
         switch (Current)
         {
             case Phase.Preparing:
-                // Wait ~1s after world entry for the player to finish spawning.
-                if (++prepTicks >= 60 && Main.LocalPlayer is { active: true, dead: false })
-                    Prepare();
-                else if (prepTicks % 300 == 0)
-                    Mod.Logger.Info($"[BossPilot] preparing: paused={Main.gamePaused} netMode={Main.netMode} playerActive={Main.LocalPlayer?.active} dead={Main.LocalPlayer?.dead}");
+                // GUI autorun: wait ~1s after world entry for the player to finish spawning.
+                if (!prepared)
+                {
+                    if (++prepTicks >= 60 && Main.LocalPlayer is { active: true, dead: false })
+                        Prepare();
+                    else if (prepTicks % 300 == 0)
+                        Mod.Logger.Info($"[BossPilot] preparing: paused={Main.gamePaused} netMode={Main.netMode} playerActive={Main.LocalPlayer?.active} dead={Main.LocalPlayer?.dead}");
+                }
+                else if (++settleTicks >= SettleTicks) BeginFight();
                 break;
             case Phase.Fighting:
                 TickFight();
@@ -343,12 +409,35 @@ public sealed class TrialRunner : ModSystem
 
     private void TickFight()
     {
-        Player p = Main.LocalPlayer;
-        // Victory = every tracked part dead (twins both, EoW every segment).
-        BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
-        bool bossGone = !AnyTrackedActive(entry);
-        double elapsed = (Main.GameUpdateCount - fightStartTick) / 60.0;
+        Context.Tick++;
+        long life = 0, lifeMax = 0;
+        bool any = false;
+        foreach (NPC n in Main.npc)
+        {
+            if (!n.active || !trackedTypes.Contains(n.type)) continue;
+            any = true;
+            life += Math.Max(n.life, 0);
+            lifeMax += n.lifeMax;
+        }
+        if (any)
+        {
+            bossSeen = true;
+            BossHpFraction = lifeMax > 0 ? (float)life / lifeMax : 0f;
+        }
 
+        if (Plan == null) LogAutoPilotState();
+
+        if (Main.LocalPlayer.dead) Finish("death");
+        else if (!any && Context.Tick > 2) Finish(!bossSeen ? "spawn_failed" : bossDefeated ? "victory" : "despawn");
+        else if (Context.Tick / 60.0 >= Scenario.MaxDurationSeconds) Finish("timeout");
+    }
+
+    /// <summary>AutoPilot debugging for plan-less fights: kit, WoF parts, falls below the bridge line.</summary>
+    private void LogAutoPilotState()
+    {
+        // Same locals the block had inside TickFight before it moved here.
+        Player p = Main.LocalPlayer;
+        BossCatalog.BossEntry entry = BossCatalog.Bosses[Scenario.Boss];
         if ((int)Main.GameUpdateCount % 600 == 0)
         {
             int stars = 0;
@@ -385,31 +474,26 @@ public sealed class TrialRunner : ModSystem
             Tile t = Framing.GetTileSafely(feet.X, feet.Y);
             Mod.Logger.Info($"[BossPilot] feet probe ({feet.X},{feet.Y}): hasTile={t.HasTile} type={t.TileType} active={t.HasUnactuatedTile} py={p.Center.Y / 16f:F1}");
         }
-
-        if (bossGone) Finish("victory");
-        else if (p.dead) Finish("death");
-        else if (elapsed >= Scenario.MaxDurationSeconds) Finish("timeout");
     }
 
-    /// <summary>Any active NPC of the boss's main type or tracked extra parts.</summary>
-    private static bool AnyTrackedActive(BossCatalog.BossEntry entry)
+    internal void NoteKill(NPC npc)
     {
-        foreach (NPC n in Main.npc)
-        {
-            if (!n.active) continue;
-            if (n.type == entry.NpcId) return true;
-            foreach (int extra in entry.ExtraPartIds)
-                if (n.type == extra) return true;
-        }
-        return false;
+        if (Current != Phase.Fighting || !trackedTypes.Contains(npc.type)) return;
+        Kills++;
+        // The kernel's own defeat marker: only the last Twin and the last EoW segment die with boss set,
+        // and parts (fists, hands, creepers) never have it. Killing a part and then losing the boss to
+        // a despawn is not a victory.
+        if (npc.boss) bossDefeated = true;
     }
 
     private void Finish(string result)
     {
         Result = result;
+        if (result == "victory") BossHpFraction = 0f;
         StateExport.Instance.End();
-        Main.NewText($"[BossPilot] {Scenario.Name}: {result}", Color.Orange);
-        Mod.Logger.Info($"[BossPilot] {Scenario.Name}: {result}");
+        string line = $"[BossPilot] {Scenario.Name}: {result} in {FightTicks / 60.0:F1}s, hits {Hits}";
+        Main.NewText(line, Color.Orange);
+        Mod.Logger.Info(line);
         Current = Phase.Finished;
     }
 
@@ -419,18 +503,30 @@ public sealed class TrialRunner : ModSystem
         Current = Phase.Idle;
     }
 
+    /// <summary>The live NPC of the boss's main type, if any.</summary>
+    public NPC MainBoss()
+    {
+        if (Scenario == null) return null;
+        int type = BossCatalog.Bosses[Scenario.Boss].NpcId;
+        foreach (NPC n in Main.npc)
+            if (n.active && n.type == type) return n;
+        return null;
+    }
+
     public object ActiveBossJson()
     {
-        if (bossIndex < 0 || !Main.npc[bossIndex].active) return null;
-        NPC n = Main.npc[bossIndex];
+        NPC n = MainBoss();
+        if (n == null) return null;
         return new
         {
             id = n.type,
             x = n.Center.X / 16f, y = n.Center.Y / 16f,
             hp = n.life, hp_max = n.lifeMax,
-            ai = n.ai.ToArray(),
+            ai = n.ai.Clone(),
         };
     }
+
+    public override void Unload() => BossPlan.Unload();
 
     private static void ApplyWorldFlags(ScenarioConfig scenario)
     {
@@ -472,4 +568,21 @@ public sealed class TrialRunner : ModSystem
         p.AddBuff(Terraria.ID.BuffID.WellFed, duration);
         p.AddBuff(Terraria.ID.BuffID.Lifeforce, duration);
     }
+}
+
+/// <summary>Feeds hit and kill counts of the running attempt into TrialRunner.</summary>
+public sealed class TrialMetricsPlayer : ModPlayer
+{
+    public override void OnHurt(Player.HurtInfo info)
+    {
+        TrialRunner t = TrialRunner.Instance;
+        if (t.Current != TrialRunner.Phase.Fighting || Player.whoAmI != Main.myPlayer) return;
+        t.Hits++;
+        t.DamageTaken += info.Damage;
+    }
+}
+
+public sealed class TrialMetricsNPC : GlobalNPC
+{
+    public override void OnKill(NPC npc) => TrialRunner.Instance.NoteKill(npc);
 }

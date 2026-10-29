@@ -20,6 +20,8 @@ public sealed class MenuBootstrap : ModSystem
 
     public override void Load()
     {
+        // The headless server has no main menu (and would log the probe below forever).
+        if (Main.dedServ) return;
         // ModSystem.PostUpdateEverything only ticks while a world is loaded;
         // hook DoUpdate directly so the bootstrap can fire at the main menu.
         On_Main.DoUpdate += HookDoUpdate;

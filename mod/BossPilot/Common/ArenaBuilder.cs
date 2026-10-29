@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
@@ -75,47 +76,30 @@ public static class ArenaBuilder
     }
 
     /// <summary>
-    /// Replaces the arena floor strip with the biome's grass/block type so the
-    /// game registers the requested biome at the fight location.
+    /// Turns a slab under the arena floor into the biome's block, thick enough
+    /// to pass the SceneMetrics tile-count threshold (snow and desert need 1500
+    /// tiles, so one floor row is never enough). Blocks are from TileID.Sets.*Biome
+    /// and do not fall or convert.
     /// </summary>
     private static void PaintBiomeFloor(Point origin, string biome, int width, int depth = 2)
     {
-        int tile = biome switch
+        (int tile, int threshold) = biome switch
         {
-            "corruption" => TileID.CorruptGrass,
-            "crimson" => TileID.CrimsonGrass,
-            "jungle" or "underground_jungle" => TileID.JungleGrass,
-            "hallow" => TileID.HallowedGrass,
-            "ocean" or "desert" => TileID.Sand,
-            "snow" => TileID.SnowBlock,
-            "underworld" => TileID.Ash,
-            _ => -1,
+            "corruption" => (TileID.Ebonstone, SceneMetrics.CorruptionTileThreshold),
+            "crimson" => (TileID.Crimstone, SceneMetrics.CrimsonTileThreshold),
+            "jungle" or "underground_jungle" => (TileID.JungleGrass, SceneMetrics.JungleTileThreshold),
+            "hallow" => (TileID.Pearlstone, SceneMetrics.HallowTileThreshold),
+            "desert" => (TileID.Sandstone, SceneMetrics.DesertTileThreshold),
+            "snow" => (TileID.SnowBlock, SceneMetrics.SnowTileThreshold),
+            "underworld" => (TileID.Ash, 0),
+            _ => (-1, 0),
         };
         if (tile < 0) return;
+        int rows = Math.Max(depth, threshold / width + 2);
         for (int x = origin.X - width / 2; x < origin.X + width / 2; x++)
-        {
-            if (!WorldGen.InWorld(x, origin.Y, 2)) continue;
-            if (tile == TileID.JungleGrass)
-            {
-                // Jungle grass only sticks on mud and WorldGen.PlaceTile has
-                // silent refusal modes — write the blocks directly, `depth`
-                // rows deep, so the jungle biome actually registers (tML
-                // needs 140 counted tiles). Plantera enrages (+8 speed, x2
-                // damage) when ZoneJungle is false — load-bearing.
-                for (int y = origin.Y; y < origin.Y + depth; y++)
-                {
-                    Tile t = Main.tile[x, y];
-                    t.ClearTile();
-                    t.HasTile = true;
-                    t.TileType = TileID.JungleGrass;
-                    t.Slope = SlopeType.Solid;
-                    t.IsHalfBlock = false;
-                    WorldGen.SquareTileFrame(x, y);
-                }
-            }
-            else
-                WorldGen.PlaceTile(x, origin.Y, tile, mute: true, forced: true);
-        }
+        for (int y = origin.Y; y < origin.Y + rows; y++)
+            if (WorldGen.InWorld(x, y, 2))
+                Main.tile[x, y].ResetToType((ushort)tile);
     }
 
     private static void Flatten(Point origin, int width, int height)
@@ -124,7 +108,7 @@ public static class ArenaBuilder
         for (int y = origin.Y - height; y < origin.Y + 10; y++)
         {
             if (!WorldGen.InWorld(x, y, 2)) continue;
-            Main.tile[x, y].LiquidAmount = 0; // drain lava/water pockets
+            Main.tile[x, y].LiquidAmount = 0; // ocean water / underworld lava
             if (y < origin.Y) WorldGen.KillTile(x, y, fail: false, effectOnly: false, noItem: true);
             else if (!Main.tile[x, y].HasTile) WorldGen.PlaceTile(x, y, TileID.Stone, mute: true, forced: true);
         }
